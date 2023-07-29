@@ -39,7 +39,7 @@ fs.readdirSync(packagesPath).forEach((packageName) => {
 
   archive.pipe(output);
   // add the directory, except for the package.json
-  const glob = ["**/*", "!package.json", `!${packageJson.icon}`];
+  const glob = `**/!(package.json|${packageJson.icon})*`;
   archive.glob(glob, { cwd: packagePath, dot: true });
   archive.finalize();
 
