@@ -40,7 +40,8 @@ fs.readdirSync(packagesPath).forEach((packageName) => {
   archive.pipe(output);
   // add the directory, except for the package.json
   const glob = `**/!(package.json|${packageJson.icon})*`;
-  archive.glob(glob, { cwd: packagePath, dot: true });
+  // add to fold in zip with name of package
+  archive.glob(glob, { cwd: packagePath, dot: true }, { prefix: packageName});
   archive.finalize();
 
   const categoryType = packageJson.isProject ? "project" : "addon";
