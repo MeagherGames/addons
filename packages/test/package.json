@@ -2,5 +2,9 @@
     "name": "test",
     "description": "A test",
     "version": "0.0.0",
-    "icon": "icon.png"
+    "icon": "icon.png",
+    "isProject": false,
+    "categories": [
+        "test"
+    ]
 }

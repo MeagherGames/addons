@@ -9,6 +9,10 @@ const archiver = require("archiver");
 const buildPath = path.join(__dirname, "build");
 const packagesPath = path.join(__dirname, "packages");
 const manifest = [];
+const categories = {
+  project: [],
+  addon: [],
+};
 
 fs.mkdirSync(buildPath, { recursive: true });
 
@@ -33,6 +37,7 @@ fs.readdirSync(packagesPath).forEach((packageName) => {
     version: packageJson.version,
     description: packageJson.description,
     zipPath: `${packageName}.zip`,
+    categories: packageJson.categories,
   };
 
   if (fs.existsSync(path.join(packagePath, packageJson.icon))) {
@@ -45,11 +50,24 @@ fs.readdirSync(packagesPath).forEach((packageName) => {
   }
 
   manifest.push(manifestEntry);
+
+  if (packageJson.categories) {
+    if (packageJson.isProject) {
+      categories.project.push(...packageJson.categories);
+    } else {
+      categories.addon.push(...packageJson.categories);
+    }
+  }
 });
 
 fs.writeFileSync(
   path.join(buildPath, "manifest.json"),
   JSON.stringify(manifest, null, 2)
+);
+
+fs.writeFileSync(
+  path.join(buildPath, "categories.json"),
+  JSON.stringify(categories, null, 2)
 );
 
 console.log("Build complete");
