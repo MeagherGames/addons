@@ -24,15 +24,32 @@ fs.readdirSync(packagesPath).forEach((packageName) => {
 
   archive.pipe(output);
   // add the directory, except for the package.json
-  const glob = ["**/*", "!package.json"];
+  const glob = ["**/*", "!package.json", `!${packageJson.icon}`];
   archive.glob(glob, { cwd: packagePath, dot: true });
   archive.finalize();
 
-  manifest.push({
+  const manifestEntry = {
     name: packageJson.name,
     version: packageJson.version,
     description: packageJson.description,
-    icon: packageJson.icon,
     zipPath: `${packageName}.zip`,
-  });
+  };
+
+  if (fs.existsSync(path.join(packagePath, packageJson.icon))) {
+    // Copy icon to build folder with new name
+    manifestEntry.icon = `${packageName}_icon.png`;
+    fs.copyFileSync(
+      path.join(packagePath, packageJson.icon),
+      path.join(buildPath, `${packageName}_icon.png`)
+    );
+  }
+
+  manifest.push(manifestEntry);
 });
+
+fs.writeFileSync(
+  path.join(buildPath, "manifest.json"),
+  JSON.stringify(manifest, null, 2)
+);
+
+console.log("Build complete");
