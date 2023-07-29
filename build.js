@@ -22,6 +22,14 @@ fs.mkdirSync(buildPath, { recursive: true });
 fs.readdirSync(packagesPath).forEach((packageName) => {
   const packagePath = path.join(packagesPath, packageName);
   const packageJson = require(path.join(packagePath, "package.json"));
+
+  const requiredFields = ["name", "version", "description", "godotVersion"];
+  requiredFields.forEach((field) => {
+    if (!packageJson[field]) {
+      throw new Error(`Missing required field "${field}" in "${packageName}" package.json`);
+    }
+  });
+
   const zipPath = path.join(buildPath, `${packageName}.zip`);
 
   const output = fs.createWriteStream(zipPath);
@@ -35,16 +43,13 @@ fs.readdirSync(packagesPath).forEach((packageName) => {
   archive.glob(glob, { cwd: packagePath, dot: true });
   archive.finalize();
 
+  const categoryType = packageJson.isProject ? "project" : "addon";
   // Configure category info
-  let packageCategoryId = 0;
   if (packageJson.category) {
-    if (packageJson.isProject) {
-      categories.project[packageJson.category] = category_id;
-    } else {
-      categories.addon[packageJson.category] = category_id;
+    if (!categories[categoryType][packageJson.category]) {
+      categories[categoryType][packageJson.category] = category_id;
+      category_id += 1;
     }
-    packageCategoryId = category_id;
-    category_id += 1;
   }
 
   const manifestEntry = {
@@ -52,7 +57,9 @@ fs.readdirSync(packagesPath).forEach((packageName) => {
     version: packageJson.version,
     description: packageJson.description,
     zipPath: `${packageName}.zip`,
-    categoryId: packageCategoryId,
+    category: packageJson.category || "Misc",
+    categoryId: categories[categoryType][packageJson.category || "Misc"],
+    godotVersion: packageJson.godotVersion,
   };
 
   if (fs.existsSync(path.join(packagePath, packageJson.icon))) {
