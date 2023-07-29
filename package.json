@@ -1,0 +1,11 @@
+{
+  "name": "addons",
+  "version": "0.0.0",
+  "description": "Meagher Games addons",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "archiver": "^5.3.1"
+  }
+}
