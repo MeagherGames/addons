@@ -1,0 +1,8 @@
+{
+    "name": "States",
+    "description": "Simple hierarchical state machines and utility AI",
+    "category": "Misc",
+    "godotVersion": "4.1",
+    "version": "1.0.0",
+    "icon": "state_icon.png"
+}

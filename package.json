@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "description": "Meagher Games addons",
   "scripts": {
-    "build": "node build.js"
+    "build": "node scripts/build.js",
+    "create": "node scripts/create.js"
   },
   "dependencies": {
     "archiver": "^5.3.1"
