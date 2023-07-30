@@ -6,8 +6,8 @@ const fs = require("fs");
 const path = require("path");
 const archiver = require("archiver");
 
-const buildPath = path.join(__dirname, "build");
-const packagesPath = path.join(__dirname, "packages");
+const buildPath = path.join(process.cwd(), "build");
+const packagesPath = path.join(process.cwd(), "packages");
 const manifest = [];
 let category_id = 1;
 const categories = {
