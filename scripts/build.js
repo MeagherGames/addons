@@ -9,11 +9,11 @@ const archiver = require("archiver");
 const buildPath = path.join(process.cwd(), "build");
 const packagesPath = path.join(process.cwd(), "packages");
 const manifest = [];
-let category_id = 1;
+let category_id = 2;
 const categories = {
   project: {},
   addon: {
-    "Misc": 0,
+    "Misc": 1,
   },
 };
 
