@@ -11,7 +11,7 @@ func _init(rest:Vector3 = Vector3.ZERO, stiffnness:float = 1.0, damping:float = 
     self.stiffness = stiffness
     self.damping = damping
 
-func update(value:Vector3, delta:float):
+func update(value:Vector3, delta:float = 1.0):
     var diff = rest - value
     var spring_force = diff * stiffness
     var damping_force = -velocity * damping
