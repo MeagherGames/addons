@@ -7,19 +7,6 @@ class_name ConcurrentState
 ## It will call the update and physics_update functions of all its children that are states every frame and physics frame respectively.
 ## And it will automatically call exit() when it is removed from the scene tree.
 
-func _ready():
-	if get_parent() is ConcurrentState:
-		set_process(false)
-		set_physics_process(false)
-	else:
-		enter()
-
-func _process(delta):
-	_internal_update(delta)
-
-func _physics_process(delta):
-	_internal_physics_update(delta)
-
 ## Calls the enter function of all children that are states.
 func enter():
 	for child in get_children():

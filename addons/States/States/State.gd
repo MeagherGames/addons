@@ -12,6 +12,23 @@ signal exited()
 ## Emitted when a transition is requested.
 signal transition_requested()
 
+func _enter_tree():
+	# If this state is the root of the tree, then it should be active by default.
+	if get_parent() is State:
+		set_process(false)
+		set_physics_process(false)
+	else:
+		enter()
+
+func _exit_tree():
+	_internal_exit()
+
+func _process(delta):
+	_internal_update(delta)
+
+func _physics_process(delta):
+	_internal_physics_update(delta)
+
 ## Override this method to define behavior when entering the state.
 func enter():
 	pass
