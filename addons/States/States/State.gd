@@ -12,13 +12,12 @@ signal exited()
 ## Emitted when a transition is requested.
 signal transition_requested()
 
-func _enter_tree():
-	# If this state is the root of the tree, then it should be active by default.
+func _ready():
 	if get_parent() is State:
 		set_process(false)
 		set_physics_process(false)
 	else:
-		enter()
+		_internal_enter()
 
 func _exit_tree():
 	_internal_exit()
