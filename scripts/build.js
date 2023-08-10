@@ -32,10 +32,6 @@ function includeDependencies(root, addonJson, archive) {
       if (dependency === ".") {
         dependency = "**/*";
       }
-      const dependencyJson = require(path.join(
-        dependencyBasePath,
-        "addon.json"
-      ));
       
       // add to fold in zip with name of addon
       archive.glob(
@@ -43,7 +39,16 @@ function includeDependencies(root, addonJson, archive) {
         { cwd: dependencyBasePath, dot: true, ignore: ["addon.json"] },
         { prefix: root }
       );
-      includeDependencies(root, dependencyJson, archive);
+      
+      const dependencyJsonPath = path.join(
+        dependencyBasePath,
+        "addon.json"
+      );
+
+      if (fs.existsSync(dependencyJsonPath)) {
+        const dependencyJson = require(dependencyJsonPath);
+        includeDependencies(root, dependencyJson, archive);
+      }
     });
   }
 }
