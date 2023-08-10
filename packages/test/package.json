@@ -1,8 +1,0 @@
-{
-    "name": "test",
-    "description": "A test",
-    "godotVersion": "4.1",
-    "version": "0.0.0",
-    "icon": "icon.png",
-    "category": "test"
-}

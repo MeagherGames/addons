@@ -1,0 +1,11 @@
+{
+    "name": "CharacterController3D",
+    "description": "CharacterController3D",
+    "category": "Controller",
+    "godotVersion": "4.1",
+    "version": "1.0.0",
+    "icon": "Icon.png",
+    "dependencies": [
+        "States"
+    ]
+}

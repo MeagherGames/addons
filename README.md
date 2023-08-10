@@ -19,3 +19,9 @@ npm run create
 ```
 When creating an addon, the root directory of that addon is like the root directory of the Godot Engine project it'll be used in. So if you want anything in a folder say `addons/MyAddon` you'll need to create that folder structure yourself.
 
+
+## Build
+```bash
+npm run build
+```
+This will create a `build` folder that will be used in the release.

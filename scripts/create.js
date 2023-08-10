@@ -16,23 +16,25 @@ const ask = (question, defaultValue = "") => {
 };
 const create = async () => {
   const name = await ask("Addon name");
-  const packageJson = {
+  const addonJson = {
     name,
+    isProject: await ask("Is project", "no") !== "no",
     description: await ask("Addon description", name),
     category: await ask("Category", "Misc"),
     godotVersion: await ask("Godot version", "4.1"),
     version: await ask("Version", "1.0.0"),
     icon: "Icon.png",
+    dependencies: [],
   };
-  const addonPath = `packages/${name}`;
+  const addonPath = `addons/${name}`;
   fs.mkdirSync(addonPath, { recursive: true });
 
   fs.writeFileSync(
-    `${addonPath}/package.json`,
-    JSON.stringify(packageJson, null, 4)
+    `${addonPath}/addon.json`,
+    JSON.stringify(addonJson, null, 4)
   );
-  if (fs.existsSync("scripts/Icon.png")) {
-    fs.copyFileSync("scripts/Icon.png", `${addonPath}/Icon.png`);
+  if (fs.existsSync("scripts/DefaultIcon.png")) {
+    fs.copyFileSync("scripts/DefaultIcon.png", `${addonPath}/Icon.png`);
   }
 
   console.log(`Addon ${name} created`);

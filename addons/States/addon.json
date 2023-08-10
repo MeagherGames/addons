@@ -4,5 +4,8 @@
     "category": "Misc",
     "godotVersion": "4.1",
     "version": "1.0.0",
-    "icon": "States/state_icon.png"
+    "icon": "States/state_icon.png",
+    "dependencies": [
+        "Utilities/Utilities/PriorityQueue.gd"
+    ]
 }
