@@ -3,9 +3,6 @@ class_name ConcurrentState
 
 ## A concurrent state is a state that runs the update and physics_update functions of all its children concurrently.
 ## It is useful for running multiple states at the same time.
-## If this node is not a child of a ConcurrentState, it will automatically call enter() when it is added to the scene tree.
-## It will call the update and physics_update functions of all its children that are states every frame and physics frame respectively.
-## And it will automatically call exit() when it is removed from the scene tree.
 
 ## Calls the enter function of all children that are states.
 func enter():

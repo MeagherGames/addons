@@ -3,6 +3,9 @@ extends Node
 class_name State
 
 ## A [State] is a piece of logic that only runs when it is active.
+## If this node is not a child of a State, it will automatically call enter() when it is added to the scene tree.
+## It will call the update and physics_update functions every frame while it is active.
+## And it will automatically call exit() when it is removed from the scene tree.
 ## See [ConcurrentState] and [SelectState] for states that control when other states are active.
 
 ## Emitted when the state is entered.

@@ -44,8 +44,9 @@ jobs:
       - uses: actions/checkout@v3
       - name: Version
         id: tag_version
-        uses: mathieudutour/github-tag-action@v5.6
+        uses: mathieudutour/github-tag-action@v6.1
         with:
+          default_bump: false
           github_token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Verify Tag
@@ -53,14 +54,14 @@ jobs:
         run: exit 1
       
       - name: Download Build Artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3.0.2
         with:
           name: build
           path: build
       
       - name: Create Github Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: actions/create-release@v1.1.4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -69,7 +70,7 @@ jobs:
           body: ${{ steps.tag_version.outputs.changelog }}
       
       - name: Upload Release Artifact
-        uses: svenstaro/upload-release-action@v2
+        uses: svenstaro/upload-release-action@2.7.0
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: "build/*.*"
@@ -83,7 +84,7 @@ jobs:
           content: ${{ steps.tag_version.outputs.new_version }}
           mode: 0655
       
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3.1.2
         with:
           name: VERSION
           path: ./VERSION.txt
@@ -91,6 +92,7 @@ jobs:
     needs: [Build, Release]
     runs-on: ubuntu-latest
     steps:
-      - uses: geekyeggo/delete-artifact@v1
+      - uses: geekyeggo/delete-artifact@v2
         with:
           name: VERSION
+          failOnError: false
