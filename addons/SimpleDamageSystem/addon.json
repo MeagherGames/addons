@@ -1,0 +1,10 @@
+{
+    "name": "SimpleDamageSystem",
+    "isProject": false,
+    "description": "A simple area based damage system",
+    "category": "Gadgets",
+    "godotVersion": "4.1",
+    "version": "0.0.1",
+    "icon": "Icon.png",
+    "dependencies": []
+}

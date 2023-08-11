@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://c3aqocalopww1"]
+
+[ext_resource type="Script" path="res://Gadgets/SimpleThirdPersonCamera/SimpleThirdPersonCamera.gd" id="1_7kpax"]
+
+[node name="SimpleThirdPersonCamera" type="SpringArm3D"]
+spring_length = 5.0
+script = ExtResource("1_7kpax")
+
+[node name="Camera3D" type="Camera3D" parent="."]

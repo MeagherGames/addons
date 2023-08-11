@@ -1,0 +1,10 @@
+{
+    "name": "SimpleThirdPersonCamera",
+    "isProject": false,
+    "description": "A simple swivle camera around a point",
+    "category": "Gadgets",
+    "godotVersion": "4.1",
+    "version": "1.0.0",
+    "icon": "Icon.png",
+    "dependencies": []
+}

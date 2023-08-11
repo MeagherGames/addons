@@ -32,23 +32,30 @@ function includeDependencies(root, addonJson, archive) {
       if (dependency === ".") {
         dependency = "**/*";
       }
+
+      const dependencyJsonPath = path.join(dependencyBasePath, "addon.json");
+      const ignore = ["addon.json"];
+
+      if (fs.existsSync(dependencyJsonPath)) {
+        const dependencyJson = require(dependencyJsonPath);
+        if (dependencyJson.ignore) {
+          ignore.push(...dependencyJson.ignore);
+        }
+
+        includeDependencies(root, dependencyJson, archive);
+      }
       
       // add to fold in zip with name of addon
       archive.glob(
         dependency,
-        { cwd: dependencyBasePath, dot: true, ignore: ["addon.json"] },
+        {
+          cwd: dependencyBasePath,
+          dot: true,
+          ignore,
+        },
         { prefix: root }
       );
       
-      const dependencyJsonPath = path.join(
-        dependencyBasePath,
-        "addon.json"
-      );
-
-      if (fs.existsSync(dependencyJsonPath)) {
-        const dependencyJson = require(dependencyJsonPath);
-        includeDependencies(root, dependencyJson, archive);
-      }
     });
   }
 }
@@ -79,7 +86,7 @@ fs.readdirSync(addonsPath).forEach((addonName) => {
   // add to fold in zip with name of addon
   archive.glob(
     "**/*",
-    { cwd: addonPath, dot: true, ignore: ["addon.json"] },
+    { cwd: addonPath, dot: true, ignore: ["addon.json", ...addonJson.ignore || []] },
     { prefix: addonName }
   );
 
@@ -114,6 +121,8 @@ fs.readdirSync(addonsPath).forEach((addonName) => {
       path.join(addonPath, addonJson.icon),
       path.join(buildPath, `${addonName}_icon.png`)
     );
+  }else{
+    manifestEntry.icon = "DefaultIcon.png";
   }
 
   manifest.push(manifestEntry);
@@ -128,5 +137,7 @@ fs.writeFileSync(
   path.join(buildPath, "categories.json"),
   JSON.stringify(categories, null, 2)
 );
+
+fs.copyFileSync("scripts/DefaultIcon.png", path.join(buildPath, "DefaultIcon.png"));
 
 console.log("Build complete");

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bmeenjgkloh0l"]
+
+[ext_resource type="Script" path="res://Gadgets/DamageSystem/Death3D/Death3D.gd" id="1_8c4be"]
+
+[node name="Death3D" type="Node"]
+script = ExtResource("1_8c4be")

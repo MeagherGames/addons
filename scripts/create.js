@@ -25,6 +25,7 @@ const create = async () => {
     version: await ask("Version", "1.0.0"),
     icon: "Icon.png",
     dependencies: [],
+    ignore: [],
   };
   const addonPath = `addons/${name}`;
   fs.mkdirSync(addonPath, { recursive: true });
