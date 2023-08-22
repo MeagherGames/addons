@@ -8,9 +8,10 @@ var target:HitBox3D
 var target_position:Vector3
 var target_root_node:Node
 
-var damage:float
-var knockback_strength:float
-var knockback_direction:Vector3
+var damage:float = 0.0
+var knockback_strength:float = 0.0
+var knockback_direction:Vector3 = Vector3.ZERO
+var force_respawn:bool = false
 
 func get_knockback() -> Vector3:
     if knockback_direction.is_zero_approx():

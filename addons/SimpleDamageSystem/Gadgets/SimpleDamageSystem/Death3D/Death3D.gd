@@ -28,6 +28,8 @@ func on_hit(data:HitData3D):
 	health = max(health-data.damage, 0.0)
 	if health <= 0:
 		kill()
+	elif data.force_respawn:
+		respawn()
 	else:
 		# knockback
 		var knockback = data.get_knockback()
@@ -41,4 +43,5 @@ func kill():
 func respawn():
 	var spawn_location = Game.last_checkpoint if spawn_at_checkpoint else spawn_point
 	character.global_position = spawn_location
+	health = max_health
 	emit_signal("respawned")
