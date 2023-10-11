@@ -19,6 +19,7 @@ class Consideration extends RefCounted:
 	var value:float = 0.0
 	var weight:float = 1.0
 
+	@warning_ignore("shadowed_variable")
 	func _init(value:float, weight:float = 1.0):
 		self.value = value
 		self.weight = weight
@@ -71,6 +72,7 @@ func get_considerations() -> Array[Consideration]:
 ##  # do stuff when selected
 ## 
 ## [/codeblock]
+@warning_ignore("shadowed_variable")
 func consider(value:float, weight:float = 1.0) -> Consideration:
 	var consideration = Consideration.new(value, weight)
 	return consideration

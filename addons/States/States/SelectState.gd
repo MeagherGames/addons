@@ -38,6 +38,7 @@ func enter():
 func exit():
 	if current_state:
 		current_state._internal_exit()
+		current_state = null
 
 ## Calls the update method of the current state.
 func update(delta):

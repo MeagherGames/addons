@@ -5,8 +5,11 @@ class_name UtilitySelectState
 ## The utility select state selects a child state based on the utility of the child [UtilityState].
 ## If the child is not a [UtilityState] but still a [State], it's utility is considered to be 0. This can be used to have a fallback state.
 
+signal completed()
+
 ## How many of the top children should be considered for selection.
 @export var select_from_top:int = 1
+@export var continue_after_completion:bool = true
 
 ## The seed used for random selection. If the seed is -1, the seed is randomized.
 @warning_ignore("shadowed_global_identifier") 
@@ -22,10 +25,15 @@ class_name UtilitySelectState
 
 var rng:RandomNumberGenerator = RandomNumberGenerator.new()
 
+func _on_child_completed():
+	emit_signal("completed")
+	if continue_after_completion:
+		_internal_select_best_child()
+
 func _on_child_added(child):
 	super._on_child_added(child)
 	if child is UtilityState:
-		child.completed.connect(func (): _internal_select_best_child())
+		child.completed.connect(_on_child_completed)
 
 func _on_child_transition(new_state:State):
 	if new_state == null:
@@ -49,6 +57,7 @@ func _internal_select_best_child():
 				continue
 
 		if not is_finite(utility):
+			# if the utility is Infinity we can immediately select the child
 			_on_child_transition(child)
 			return
 		
@@ -82,7 +91,8 @@ func _internal_select_best_child():
 ## Selects the best child state based on the utility of the children.
 ## and calls [State.enter] on the selected child.
 func enter():
-	_internal_select_best_child()
+	if not current_state:
+		_internal_select_best_child()
 	super.enter()
 
 ## every update checks if a current_state is still selected. If not, it selects a new child state.

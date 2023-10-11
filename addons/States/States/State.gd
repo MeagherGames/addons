@@ -15,15 +15,25 @@ signal exited()
 ## Emitted when a transition is requested.
 signal transition_requested()
 
-func _ready():
+func _enable():
 	if get_parent() is State:
 		set_process(false)
 		set_physics_process(false)
 	else:
+		set_process(true)
+		set_physics_process(true)
 		_internal_enter()
 
-func _exit_tree():
+func _disable():
+	set_process(false)
+	set_physics_process(false)
 	_internal_exit()
+
+func _ready():
+	_enable()
+
+func _exit_tree():
+	_disable()
 
 func _process(delta):
 	_internal_update(delta)
