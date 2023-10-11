@@ -1,0 +1,11 @@
+{
+    "name": "AsepriteImporter",
+    "isProject": false,
+    "description": "Import Aseprite files",
+    "category": "Tools",
+    "godotVersion": "4.1",
+    "version": "1.0.0",
+    "icon": "Icon.png",
+    "dependencies": [],
+    "ignore": []
+}
