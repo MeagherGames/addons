@@ -3,10 +3,9 @@ extends RefCounted
 
 ## AsepriteFile is a class that parses the JSON data from an Aseprite file and converts it to a more usable structure
 
-const SIDES = ["right", "left", "top", "bottom", "front", "back"]
-
 var data:Dictionary ## The raw data from the JSON file
 var image:Image ## The sprite sheet image
+var texture:Texture2D ## The sprite sheet texture
 var width:float ## The width of the sprite sheet
 var height:float ## The height of the sprite sheet
 var hframes:int ## The number of horizontal frames
@@ -15,9 +14,6 @@ var layers:Array ## The layers in the sprite sheet
 var animations:Array ## The animations in the sprite sheet
 var user_data:Array ## The user data for each frame
 var sides:Dictionary ## The sides of the sprite sheet
-var is_directional:bool :
-	get:
-		return sides.size() > 0
 
 class Tag extends RefCounted:
 	var name:String
@@ -43,42 +39,6 @@ class Tag extends RefCounted:
 					continue
 				self.data.append(item.strip_edges())
 
-func add_side_tag(tag:Tag, side:String, scale:Vector2):
-	if not sides.has(side):
-		sides[side] = {}
-	sides[side][tag.name] = {
-		tag = tag,
-		scale = scale
-	}
-
-func normalize_tag(tag:Dictionary) -> Tag:
-	var result = Tag.new(tag)
-
-	var data:Array[String] = []
-	## Extract information about the sides of the sprite sheet
-	## This will inform directional sprites
-	for item in result.data:
-		# ex: right:0.5:0.5
-		var parts:PackedStringArray = item.split(":", false, 2)
-		if SIDES.has(parts[0]):
-			var side = parts[0]
-			var scale = Vector2(1.0, 1.0)
-			
-			if parts.size() > 1 and parts[1].is_valid_float():
-				scale.x = float(parts[1])
-			if parts.size() > 2:
-				# check to see if there are more colons and ignore them
-				var scale_y_parts:PackedStringArray = parts[2].split(":", false, 1)
-				if scale_y_parts[0].is_valid_float():
-					scale.y = float(scale_y_parts[0])
-			
-			add_side_tag(result, side, scale)
-		
-		else:
-			data.append(item)
-	result.data = data
-	return result
-
 func normalize_animations():
 	
 	## w and h are the width and height of a single frame
@@ -95,15 +55,21 @@ func normalize_animations():
 		var frame_data = data.frames[i]
 		var hframe = int(frame_data.frame.x) / w
 		var vframe = int(frame_data.frame.y) / h
+		var atlas_texture = AtlasTexture.new()
 		
 		hframes = max(hframes, hframe)
 		vframes = max(vframes, vframe)
+
+		atlas_texture.atlas = texture
+		atlas_texture.region = Rect2(frame_data.frame.x, frame_data.frame.y, frame_data.frame.w, frame_data.frame.h)
 		
+
 		var frame = {
 			duration = frame_data.duration / 1000.0,
 			x = hframe,
 			y = vframe,
-			user_data = user_data[frame_layer_index]
+			user_data = user_data[frame_layer_index],
+			texture = atlas_texture
 		}
 
 		if layers[layer_index].frames.size() == 0:
@@ -123,13 +89,14 @@ func normalize_animations():
 			data = "",
 			autoplay = true
 		}))
-		
 	else:
 		for tag in frame_tags:
-			animations.append(normalize_tag(tag))
+			animations.append(Tag.new(tag))
 
 func normalize() -> void:
 	# Takes the raw data and converts it to a more usable structure
+
+	texture = ImageTexture.create_from_image(image)
 
 	width = data.meta.size.w
 	height = data.meta.size.h
@@ -155,3 +122,10 @@ func normalize() -> void:
 		})
 
 	normalize_animations()
+
+func get_frame_data(frame:int, layer:int = 0) -> Dictionary:
+	# Returns the data for the given frame and layer
+
+	var layer_frames = layers[layer].frames
+	var frame_data = layer_frames[frame]
+	return frame_data
