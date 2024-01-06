@@ -132,9 +132,13 @@ static func load_file(filepath:String, options:Dictionary = {}) -> AsepriteFile:
 		global_filepath
 	])
 	
-	OS.execute(aseprite_path, arguments)
+	if OS.execute(aseprite_path, arguments) == -1:
+		printerr("Unable to execute Aseprite")
+		return null
+	else:
+		prints("Aseprite executed successfully see:", data_path, sheet_path, user_data_path)
 	execute_script(
-		ProjectSettings.globalize_path("%s/aseprite_scripts/user_data.lua" % [get_script().get_path().get_base_dir()]),
+		ProjectSettings.globalize_path("res://addons/aseprite-importer/importer/aseprite_scripts/user_data.lua"),
 		{
 			file_path = global_filepath,
 			output_path = user_data_path

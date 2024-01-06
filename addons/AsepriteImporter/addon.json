@@ -7,5 +7,5 @@
     "version": "1.0.0",
     "icon": "Icon.png",
     "dependencies": [],
-    "ignore": []
+    "ignore": ["Icon.png"]
 }
