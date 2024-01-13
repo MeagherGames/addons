@@ -2,7 +2,8 @@
 extends EditorPlugin
 
 var import_plugins = [
-	preload("./importer/AnimatedSprite2DImporter.gd").new()
+	preload("./importer/AnimatedSprite2DImporter.gd").new(),
+	preload("./importer/Texture2DImporter.gd").new()
 ]
 
 func _enter_tree():

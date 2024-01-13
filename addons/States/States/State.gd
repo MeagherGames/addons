@@ -13,7 +13,7 @@ signal entered()
 ## Emitted when the state is exited.
 signal exited()
 ## Emitted when a transition is requested.
-signal transition_requested()
+signal transition_requested(state: State)
 
 func _enable():
 	if get_parent() is State:
@@ -65,7 +65,7 @@ func physics_update(delta):
 ## Call this function to request a transition to another state.
 ## This will emit the [signal State.transition_requested] signal.
 func request_transition():
-	emit_signal("transition_requested")
+	emit_signal("transition_requested", self)
 
 func _internal_enter():
 	enter()

@@ -25,12 +25,12 @@ func _get_import_options(path:String, preset:int): return []
 
 func _import(source_file, save_path, options, platform_variants, gen_files):
 	var aseprite_file = Aseprite.load_file(source_file, options)
+	var path = save_path + "." + _get_save_extension()
 
 	if aseprite_file == null:
 		return FAILED
 	
 	var scene:PackedScene = PackedScene.new()
-	var path = save_path + "." + _get_save_extension()
 	# Save an empty scene that will be resaved later
 	if ResourceSaver.save(scene, path, ResourceSaver.FLAG_BUNDLE_RESOURCES) != OK:
 		return FAILED

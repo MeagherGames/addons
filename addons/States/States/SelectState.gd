@@ -10,9 +10,13 @@ class_name SelectState
 func _enter_tree():
 	child_entered_tree.connect(_on_child_added)
 
+func _exit_tree():
+	child_entered_tree.disconnect(_on_child_added)
+
 func _on_child_added(child):
 	if child is State:
-		child.transition_requested.connect(func (): _on_child_transition(child))
+		if not child.transition_requested.is_connected(_on_child_transition):
+			child.transition_requested.connect(_on_child_transition)
 
 func _on_child_transition(new_state:State):
 	if new_state == current_state:
