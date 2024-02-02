@@ -1,0 +1,11 @@
+{
+    "name": "Context",
+    "isProject": false,
+    "description": "Share context down a node tree",
+    "category": "Misc",
+    "godotVersion": "4",
+    "version": "1.0.0",
+    "icon": "Icon.png",
+    "dependencies": [],
+    "ignore": []
+}
