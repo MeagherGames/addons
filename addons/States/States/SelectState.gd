@@ -1,5 +1,4 @@
-extends ConcurrentState
-class_name SelectState
+class_name SelectState extends ConcurrentState
 
 ## A select state is a state that can only have one child active at a time.
 ## Children of select states should use the [signal State.transition_requested] signal to request that they become active using the [method State.request_transition] method.

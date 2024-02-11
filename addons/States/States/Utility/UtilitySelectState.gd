@@ -1,6 +1,5 @@
 @icon("./utility_state_icon.png")
-extends SelectState
-class_name UtilitySelectState
+class_name UtilitySelectState extends SelectState
 
 ## The utility select state selects a child state based on the utility of the child [UtilityState].
 ## If the child is not a [UtilityState] but still a [State], it's utility is considered to be 0. This can be used to have a fallback state.

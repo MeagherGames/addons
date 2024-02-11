@@ -1,6 +1,6 @@
 @icon("./state_icon.png")
-extends Node
-class_name State
+class_name State extends Node
+
 
 ## A [State] is a piece of logic that only runs when it is active.
 ## If this node is not a child of a State, it will automatically call enter() when it is added to the scene tree.

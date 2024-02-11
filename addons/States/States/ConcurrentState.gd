@@ -1,5 +1,4 @@
-extends State
-class_name ConcurrentState
+class_name ConcurrentState extends AutoTransitionState
 
 ## A concurrent state is a state that runs the update and physics_update functions of all its children concurrently.
 ## It is useful for running multiple states at the same time.

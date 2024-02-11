@@ -1,6 +1,5 @@
 @icon("./utility_state_icon.png")
-extends State
-class_name UtilityState
+class_name UtilityState extends State
 
 ## This is a [State] that can be used in a [UtilitySelectState] to select the most appropriate state to transition to.
 
