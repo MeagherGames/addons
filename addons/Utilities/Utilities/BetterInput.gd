@@ -155,3 +155,6 @@ func is_action_just_released(player_index:int, action: StringName, exact_match: 
 func is_action_pressed(player_index:int, action: StringName, exact_match: bool = false) -> bool:
 	action = get_player_action(player_index, action)
 	return Input.is_action_pressed(action, exact_match)
+
+func is_using_controller() -> bool:
+	return player_devices[0] != -1
