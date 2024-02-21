@@ -11,6 +11,7 @@ const JOY_DEVICE_INVALID = 8
 var core_actions = []
 var device_actions = {} # { device: { core_action: device_action } }
 var player_devices:PackedInt32Array = [-1] # [ device, ... ]
+var is_using_controller = false
 
 func _init():
 	reset()
@@ -78,6 +79,8 @@ func _remove_player(device:int) -> void:
 		emit_signal("player_removed", index)
 
 func _create_actions_for_device(device: int) -> void:
+	if device_actions.has(device):
+		return
 	device_actions[device] = {}
 	for core_action in core_actions:
 		var action_name = "%d_%s" % [device, core_action]
@@ -109,6 +112,8 @@ func _is_joypad_event(event: InputEvent) -> bool:
 
 func get_player_action(player_index: int, core_action: String) -> String:
 	if player_index < 0 or player_index >= player_devices.size():
+		return core_action
+	if player_index == 0 and not is_using_controller:
 		return core_action
 	var device = player_devices[player_index]
 	if device == -1:
@@ -156,5 +161,8 @@ func is_action_pressed(player_index:int, action: StringName, exact_match: bool =
 	action = get_player_action(player_index, action)
 	return Input.is_action_pressed(action, exact_match)
 
-func is_using_controller() -> bool:
-	return player_devices[0] != -1
+func _input(event):
+	if (event is InputEventMouse or event is InputEventKey):
+		is_using_controller = false
+	elif (event is InputEventJoypadButton or event is InputEventJoypadMotion) and event.device == player_devices[0]:
+		is_using_controller = true
