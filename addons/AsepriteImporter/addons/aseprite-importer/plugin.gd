@@ -2,8 +2,8 @@
 extends EditorPlugin
 
 var import_plugins = [
-	preload("./importer/SpriteFramesImporter.gd").new(),
 	preload("./importer/AnimatedSprite2DImporter.gd").new(),
+	preload("./importer/SpriteFramesImporter.gd").new(),
 	preload("./importer/Texture2DImporter.gd").new(),
 ]
 

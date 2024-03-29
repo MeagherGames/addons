@@ -113,8 +113,11 @@ func _is_joypad_event(event: InputEvent) -> bool:
 func get_player_action(player_index: int, core_action: String) -> String:
 	if player_index < 0 or player_index >= player_devices.size():
 		return core_action
+	
+	# TODO make this configurable
 	if player_index == 0 and not is_using_controller:
 		return core_action
+	
 	var device = player_devices[player_index]
 	if device == -1:
 		return core_action
