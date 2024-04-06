@@ -19,10 +19,9 @@ var _expression_is_valid:bool = false
 func _set_enabled(value:bool):
 	is_enabled = value
 	process_mode = PROCESS_MODE_ALWAYS
-	if is_inside_tree():
-		for child in get_children():
-			if child is State:
-				child.is_enabled = value
+	for child in get_children():
+		if child is State:
+			child.is_enabled = value
 
 func _get_enabled():
 	return is_enabled

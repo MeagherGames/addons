@@ -23,17 +23,13 @@ func _on_child_transition(new_state:State):
 		current_state.is_enabled = true
 
 ## Calls the enter method of the current state.
-func _enabled():
+func _set_enabled(value):
 	for child in get_children():
 		if child is State:
 			child.is_enabled = false
 	if current_state:
-		current_state.is_enabled = is_enabled
-
-func _disabled():
-	for child in get_children():
-		if child is State:
-			child.is_enabled = true
+		current_state.is_enabled = value
+	super._set_enabled(value)
 
 func _notification(what):
 	if what == NOTIFICATION_ENTER_TREE:
