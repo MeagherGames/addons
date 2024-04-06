@@ -44,10 +44,6 @@ func _internal_get_utility() -> float:
 	
 	return result
 
-func _internal_enter() -> void:
-	enter_time = Time.get_ticks_msec() / 1000.0
-	super._internal_enter()
-
 
 ## Override this function to tell the [UtilitySelectState] if this state should be considered
 func should_consider() -> bool:
@@ -105,3 +101,8 @@ func normal_inverse(value:float) -> float:
 ## Let the [UtilitySelectState] know that this state is completed and it should transition to the next best state
 func complete():
 	emit_signal("completed")
+
+func _notification(what):
+	if what == NOTIFICATION_READY or what == NOTIFICATION_UNPAUSED:
+		if is_enabled:
+			enter_time = Time.get_ticks_msec() / 1000.0
