@@ -8,9 +8,9 @@ class_name State extends Node
 ## See [ConcurrentState] and [SelectState] for states that control when other states are active.
 
 ## Emitted when the state is entered.
-signal entered()
+signal enabled()
 ## Emitted when the state is exited.
-signal exited()
+signal disabled()
 ## Emitted when a transition is requested.
 signal transition_requested(state: State)
 
@@ -44,8 +44,8 @@ func _notification(what):
 	if  what == NOTIFICATION_ENTER_TREE or what == NOTIFICATION_UNPAUSED:
 		if is_enabled:
 			_enabled()
-			emit_signal("entered")
+			emit_signal("enabled")
 	elif what == NOTIFICATION_EXIT_TREE or what == NOTIFICATION_PAUSED:
 		if is_enabled:
 			_disabled()
-			emit_signal("exited")
+			emit_signal("disabled")
