@@ -51,6 +51,10 @@ vec3[4] get_sides(mat4 matrix){
 	if (cardinal_sides) {
 		rotY45 = mat3(vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0));
 	} else {
+		// front -> front_left
+		// right -> front_right
+		// left -> back_left
+		// back -> back_right
 		rotY45 = mat3(vec3(0.7071, 0.0, -0.7071), vec3(0.0, 1.0, 0.0), vec3(0.7071, 0.0, 0.7071));
 	}
 	
@@ -60,10 +64,10 @@ vec3[4] get_sides(mat4 matrix){
 	up = normalize(cross(front, right));
 	front = normalize(cross(right, up));
 	return {
-		normalize(rotY45 * front), // front_right
-		normalize(rotY45 * right), // back right
-		normalize(rotY45 * -front), // back_left
-		normalize(rotY45 * -right) // front_left
+		normalize(rotY45 * front),
+		normalize(rotY45 * right),
+		normalize(rotY45 * -front),
+		normalize(rotY45 * -right)
 	}; 
 }
 
