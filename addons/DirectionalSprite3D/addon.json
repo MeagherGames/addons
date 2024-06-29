@@ -1,0 +1,11 @@
+{
+    "name": "DirectionalSprite3D",
+    "isProject": false,
+    "description": "A 3D Sprite that shows different regions based on viewing angle.",
+    "category": "Node",
+    "godotVersion": "4.2",
+    "version": "1.0.0",
+    "icon": "addons/directional_sprite_3d/DirectionalSprite3D.svg",
+    "dependencies": [],
+    "ignore": []
+}
