@@ -2,9 +2,10 @@
 extends EditorPlugin
 
 var import_plugins = [
-	preload("./importer/AnimatedSprite2DImporter.gd").new(),
-	preload("./importer/SpriteFramesImporter.gd").new(),
-	preload("./importer/Texture2DImporter.gd").new(),
+	preload("res://addons/aseprite-importer/importers/AnimatedSprite2DImporter.gd").new(),
+	preload("res://addons/aseprite-importer/importers/SpriteFramesImporter.gd").new(),
+	preload("res://addons/aseprite-importer/importers/Texture2DImporter.gd").new(),
+	preload("res://addons/aseprite-importer/importers/DirectionalSprite3DImporter.gd").new(),
 ]
 
 func _enter_tree():

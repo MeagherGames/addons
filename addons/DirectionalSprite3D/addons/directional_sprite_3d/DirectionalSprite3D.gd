@@ -1,8 +1,7 @@
 @tool
-@icon("./DirectionalSprite3D.svg")
-class_name DirectionalSprite3D extends Node3D
+extends Node3D
 
-const SpriteShader = preload("./directional_sprite_shader_3d.gdshader")
+const SpriteShader = preload("res://addons/directional_sprite_3d/directional_sprite_shader_3d.gdshader")
 
 @export var texture:Texture2D : set = set_texture
 
@@ -43,6 +42,7 @@ const SpriteShader = preload("./directional_sprite_shader_3d.gdshader")
 @export_range(0.0, 1.0) var roughness:float = 1.0 : set = set_roughness
 @export_enum("billboard", "billboard_y") var billboard_mode:int = 0 : set = set_billboard_mode
 @export_enum("cardinal", "diagonal") var side_mode:int = 0 : set = set_side_mode
+@export var cast_shadow:RenderingServer.ShadowCastingSetting = RenderingServer.SHADOW_CASTING_SETTING_ON : set = set_cast_shadow
 
 var instance:RID
 var mesh:RID
@@ -159,7 +159,7 @@ func generate_mesh() -> void:
         _swap(uvs, 1, 2)
         
 
-    var indices:PackedInt32Array = [0, 1, 2, 0, 2, 3]
+    var indices:PackedInt32Array = [0, 3, 2, 0, 2, 1]
     var colors:PackedColorArray = [modulate, modulate, modulate, modulate]
 
     var arrays = []
@@ -273,3 +273,7 @@ func set_billboard_mode(value:int) -> void:
 func set_side_mode(value:int) -> void:
     side_mode = value
     RenderingServer.material_set_param(material, "cardinal_sides", side_mode == 0)
+
+func set_cast_shadow(value:RenderingServer.ShadowCastingSetting) -> void:
+    cast_shadow = value
+    RenderingServer.instance_geometry_set_cast_shadows_setting(instance, cast_shadow)

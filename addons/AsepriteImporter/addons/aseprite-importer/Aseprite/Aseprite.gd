@@ -1,7 +1,7 @@
 @tool
 extends RefCounted
 
-const AsepriteFile = preload("./AsepriteFile.gd")
+const AsepriteFile = preload("res://addons/aseprite-importer/Aseprite/AsepriteFile.gd")
 
 static func get_global_filepath(filepath) -> String:
 	return ProjectSettings.globalize_path(filepath)
@@ -105,7 +105,6 @@ static func load_file(filepath:String, options:Dictionary = {}) -> AsepriteFile:
 	if aseprite_path == "":
 		return null
 
-	var aseprite_file = AsepriteFile.new()
 	var global_filepath = get_global_filepath(filepath)
 	var data_path = get_data_path(filepath)
 	var sheet_path = get_sheet_path(filepath)
@@ -146,7 +145,9 @@ static func load_file(filepath:String, options:Dictionary = {}) -> AsepriteFile:
 	)
 	
 	# Sprite sheet, data, and user data into the AsepriteFile
-	aseprite_file.image = Image.load_from_file(sheet_path)
+	var aseprite_file_image:Image = Image.load_from_file(sheet_path)
+	var aseprite_file_data:Dictionary
+	var aseprite_file_user_data:Array
 
 	var data_file = FileAccess.open(data_path, FileAccess.READ)
 	if data_file == null:
@@ -157,7 +158,7 @@ static func load_file(filepath:String, options:Dictionary = {}) -> AsepriteFile:
 	if json.data == null:
 		printerr("Unable to parse JSON data ", data_path, json.get_error_message())
 		return null
-	aseprite_file.data = json.data
+	aseprite_file_data = json.data
 	
 	var user_data_file = FileAccess.open(user_data_path, FileAccess.READ)
 	if user_data_file == null:
@@ -169,9 +170,7 @@ static func load_file(filepath:String, options:Dictionary = {}) -> AsepriteFile:
 		printerr("Unable to parse JSON data ", user_data_path, json.get_error_message())
 		return null
 		
-	aseprite_file.user_data = json.data.user_data
+	aseprite_file_user_data = json.data.user_data
 
 	# Normalize the data
-	aseprite_file.normalize()
-
-	return aseprite_file
+	return AsepriteFile.new(aseprite_file_image, aseprite_file_data, aseprite_file_user_data)
