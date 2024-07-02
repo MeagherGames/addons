@@ -1,7 +1,7 @@
 @tool
 extends EditorImportPlugin
 
-const Aseprite = preload("./Aseprite.gd")
+const Aseprite = preload("res://addons/aseprite-importer/Aseprite/Aseprite.gd")
 
 func _get_importer_name(): return "MeagherGames.aseprite.Texture2D"
 

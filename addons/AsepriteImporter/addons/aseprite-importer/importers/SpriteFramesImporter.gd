@@ -1,7 +1,7 @@
 @tool
 extends EditorImportPlugin
 
-const Aseprite = preload("./Aseprite.gd")
+const Aseprite = preload("res://addons/aseprite-importer/Aseprite/Aseprite.gd")
 
 func _get_importer_name(): return "MeagherGames.aseprite.SpriteFrames"
 
@@ -30,36 +30,36 @@ func _import(source_file, save_path, options, platform_variants, gen_files):
 	if aseprite_file == null:
 		return FAILED
 	
+	if aseprite_file.has_layers():
+		printerr("SpriteFrames does not support layers")
+		return FAILED
 
 	# Animations
 	var sprite_frames:SpriteFrames = SpriteFrames.new()
 	sprite_frames.remove_animation("default")
 	
-	for animation_data in aseprite_file.animations:
-		sprite_frames.add_animation(animation_data.name)
-		sprite_frames.set_animation_loop(animation_data.name, true)
-		sprite_frames.set_animation_speed(animation_data.name, 1.0)
+	# Only support one layer for now
+	var layer = aseprite_file.layers[0]
+	for ase_animation in aseprite_file.animations:
+		sprite_frames.add_animation(ase_animation.name)
+		sprite_frames.set_animation_loop(ase_animation.name, true)
+		sprite_frames.set_animation_speed(ase_animation.name, 1.0)
 
-		var frames = []
-		for frame in range(animation_data.from, animation_data.to + 1):
-			var frame_data = aseprite_file.get_frame_data(frame)
-			frames.append(frame_data)
-		
-		if animation_data.direction == "reverse":
-			frames.reverse()
-		elif animation_data.direction == "pingpong":
+		var frames = layer.get_animation_data(ase_animation).frames
+
+		if ase_animation.loop_mode == Animation.LOOP_PINGPONG:
 			var reversed_frames = frames.slice(1, frames.size() - 1)
 			reversed_frames.reverse()
 			frames = frames + reversed_frames
-		elif animation_data.direction == "pingpong_reverse":
-			var reversed_frames = frames.slice(1, frames.size() - 1)
-			reversed_frames.reverse()
-			frames = frames + reversed_frames
+		if ase_animation.reverse:
 			frames.reverse()
 
 		for frame_data in frames:
-			sprite_frames.add_frame(animation_data.name, frame_data.texture, frame_data.duration)
+			var texture = AtlasTexture.new()
+			texture.atlas = aseprite_file.texture
+			texture.region = frame_data.region
+			sprite_frames.add_frame(ase_animation.name, texture, frame_data.duration)
 
 	# Done
-	ResourceSaver.save.call_deferred(sprite_frames, path, ResourceSaver.FLAG_BUNDLE_RESOURCES )
+	ResourceSaver.save.call_deferred(sprite_frames, path)
 	return OK
