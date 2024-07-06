@@ -7,7 +7,7 @@ local output_path = app.params["output_path"]
 local filename = fs.fileTitle(file_path)
 local sprite = app.open(file_path)
 
-if not sprite then return print "No active sprite" end
+if not sprite then return error("No active sprite") end
 
 local function export_user_data(cels)
     local user_data = {}

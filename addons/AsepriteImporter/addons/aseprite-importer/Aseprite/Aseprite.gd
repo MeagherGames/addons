@@ -25,7 +25,7 @@ static func get_tile_set_data_path(filepath) -> String:
 static func test_aseprite_path(file_path:String) -> bool:
 	if file_path == "":
 		return false
-	if OS.execute(file_path, ["--version"]) == -1:
+	if execute(file_path, ["--version"]) != OK:
 		return false
 	return true
 
@@ -79,6 +79,18 @@ static func find_aseprite() -> String:
 	})
 	return ""
 
+static func execute(command:String, arguments:Array = [], print_output = false) -> int:
+	var res:int = -1
+	if print_output:
+		var output = []
+		res = OS.execute(command, arguments, output, true, true)
+		if res != OK:
+			printerr("Unable to execute \"", command,  "\" Error Code ", res, ":\n", "\n".join(PackedStringArray(output)))
+	else:
+		res = OS.execute(command, arguments)
+	
+	return res
+
 static func execute_script(script_path:String, parameters:Dictionary = {}, print_output = false) -> int:
 	var aseprite_path = find_aseprite()
 	var arguments = [
@@ -90,15 +102,7 @@ static func execute_script(script_path:String, parameters:Dictionary = {}, print
 		])
 	arguments.append_array(["--script", script_path])
 	
-	var res:int = -1
-	if print_output:
-		var output = []
-		res = OS.execute(aseprite_path, arguments, output, true)
-		print("\n".join(PackedStringArray(output)))
-	else:
-		res = OS.execute(aseprite_path, arguments)
-	
-	return res
+	return execute(aseprite_path, arguments, print_output)
 
 static func load_file(filepath:String, options:Dictionary = {}) -> AsepriteFile:
 	var aseprite_path = find_aseprite()
@@ -131,18 +135,19 @@ static func load_file(filepath:String, options:Dictionary = {}) -> AsepriteFile:
 		global_filepath
 	])
 	
-	if OS.execute(aseprite_path, arguments) == -1:
+	if execute(aseprite_path, arguments) != OK:
 		printerr("Unable to execute Aseprite")
 		return null
-	else:
-		prints("Aseprite executed successfully see:", data_path, sheet_path, user_data_path)
-	execute_script(
-		ProjectSettings.globalize_path("res://addons/aseprite-importer/importer/aseprite_scripts/user_data.lua"),
+	
+	if execute_script(
+		ProjectSettings.globalize_path("res://addons/aseprite-importer/Aseprite/aseprite_scripts/user_data.lua"),
 		{
 			file_path = global_filepath,
 			output_path = user_data_path
 		}
-	)
+	) != OK:
+		printerr("Unable to execute user data script")
+		return null
 	
 	# Sprite sheet, data, and user data into the AsepriteFile
 	var aseprite_file_image:Image = Image.load_from_file(sheet_path)
@@ -151,7 +156,7 @@ static func load_file(filepath:String, options:Dictionary = {}) -> AsepriteFile:
 
 	var data_file = FileAccess.open(data_path, FileAccess.READ)
 	if data_file == null:
-		printerr("Unable to open data file ", data_path)
+		printerr("Unable to open data file ", data_path, " [Error ", FileAccess.get_open_error(), "]")
 		return null
 	json.parse(data_file.get_as_text())
 
@@ -162,7 +167,7 @@ static func load_file(filepath:String, options:Dictionary = {}) -> AsepriteFile:
 	
 	var user_data_file = FileAccess.open(user_data_path, FileAccess.READ)
 	if user_data_file == null:
-		printerr("Unable to open user data file ", user_data_path)
+		printerr("Unable to open user data file ", user_data_path, " [Error ", FileAccess.get_open_error(), "]")
 		return null
 	json.parse(user_data_file.get_as_text())
 
