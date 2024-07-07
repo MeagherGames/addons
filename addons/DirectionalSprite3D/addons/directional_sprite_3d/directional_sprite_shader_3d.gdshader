@@ -13,11 +13,6 @@ uniform float specular = 0.5;
 uniform float metallic = 0.0;
 uniform float roughness = 1.0;
 
-uniform vec2 uv1_offset = vec2(0.0);
-uniform vec2 uv1_scale = vec2(1.0);
-uniform vec2 uv2_offset = vec2(0.0);
-uniform vec2 uv2_scale = vec2(1.0);
-
 uniform float alpha_scissor_threshold = 0.5;
 
 uniform bool billboard_y = false;
@@ -30,14 +25,12 @@ vec3 srgb(vec3 rgb){
 }
 
 vec2 pixel_filter_uv(vec2 uv, vec2 texture_size){
-	vec2 pixel_size = 1.0 / texture_size;
+	vec2 pixel_size = (1.0 / texture_size);
 	vec2 box_size = clamp(fwidth(uv) * texture_size, 1e-5, 1.0);
 	vec2 texel = uv * texture_size - 0.5 * box_size;
 	vec2 texel_offset = smoothstep(1.0 - box_size, vec2(1.0), fract(texel));
 	
-	vec2 new_uv = (floor(texel) + 0.5 + texel_offset) * pixel_size;
-	
-	return new_uv;
+	return (floor(texel) + 0.5 + texel_offset) * pixel_size;
 }
 
 vec4 texture_pixel(sampler2D tex, vec2 uv){
@@ -93,8 +86,6 @@ void vertex(){
 	if (!OUTPUT_IS_SRGB) {
 		COLOR.rgb = srgb(COLOR.rgb);
 	}
-	UV=UV*uv1_scale.xy+uv1_offset.xy;
-	UV2=UV2*uv2_scale.xy+uv2_offset.xy;
 	
 	vec3 cameraDirectionView = normalize(INV_VIEW_MATRIX[2].xyz);
 	vec3[4] sides = get_sides(MODEL_MATRIX);
@@ -115,7 +106,8 @@ void vertex(){
 
 void fragment() {
 	vec4 region = {front_region, right_region, back_region, left_region}[closest_side];
-	vec2 uv = mix(region.xy, region.zw, UV);
+	vec2 half_pixel = 1.0 / vec2(textureSize(texture_albedo, 0)) * 0.5;
+	vec2 uv = mix(region.xy + half_pixel, region.zw, UV);
 	
 	vec4 albedo_tex = texture_pixel(texture_albedo,uv);
 	albedo_tex *= COLOR;
