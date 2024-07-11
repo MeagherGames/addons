@@ -19,11 +19,11 @@ func _get_import_order(): return 0
 
 func _get_priority(): return 1
 
-func _get_preset_name(preset:int): return "Default"
+func _get_preset_name(_preset:int): return "Default"
 
-func _get_import_options(path:String, preset:int): return []
+func _get_import_options(_path:String, _preset:int): return []
 
-func _import(source_file, save_path, options, platform_variants, gen_files):
+func _import(source_file, save_path, options, _platform_variants, _gen_files):
 	var aseprite_file = Aseprite.load_file(source_file, options)
 	var path = save_path + "." + _get_save_extension()
 
@@ -32,11 +32,6 @@ func _import(source_file, save_path, options, platform_variants, gen_files):
 
 	if aseprite_file.has_layers():
 		printerr("AnimatedSprite2D does not support layers")
-		return FAILED
-	
-	var scene:PackedScene = PackedScene.new()
-	# Save an empty scene that will be resaved later
-	if ResourceSaver.save(scene, path) != OK:
 		return FAILED
 
 	var animation_sprite_2d:AnimatedSprite2D = AnimatedSprite2D.new()
@@ -73,8 +68,6 @@ func _import(source_file, save_path, options, platform_variants, gen_files):
 	
 	animation_sprite_2d.frames = sprite_frames
 
+	var scene:PackedScene = PackedScene.new()
 	scene.pack(animation_sprite_2d)
-
-	# Done
-	ResourceSaver.save.call_deferred(scene, path)
-	return OK
+	return ResourceSaver.save(scene, path)
