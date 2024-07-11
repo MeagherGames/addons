@@ -57,6 +57,7 @@ func _init():
 
     RenderingServer.instance_attach_object_instance_id(instance, get_instance_id())
     RenderingServer.instance_set_base(instance, mesh)
+    set_notify_transform(true)
 
     _queue_draw()
 
@@ -82,9 +83,6 @@ func _draw():
     _is_drawing = false
 
 func _update_visibility():
-    if not is_visible_in_tree():
-        return
-
     RenderingServer.instance_set_visible(instance, is_visible_in_tree())
 
 func _notification(what):
