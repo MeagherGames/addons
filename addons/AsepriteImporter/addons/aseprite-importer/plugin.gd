@@ -9,6 +9,7 @@ var import_plugins = [
 ]
 
 func _enter_tree():
+	ProjectSettings.set("editor/import/use_multiple_threads", false) # There is a bug with the importers and multiple threads
 	for import_plugin in import_plugins:
 		add_import_plugin(import_plugin)
 
