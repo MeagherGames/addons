@@ -17,8 +17,8 @@ signal transition_requested(state: State)
 @export var is_enabled: bool = true : set = _set_enabled, get = _get_enabled
 
 func _set_enabled(value: bool):
-	process_mode = PROCESS_MODE_PAUSABLE if value else PROCESS_MODE_DISABLED
 	is_enabled = value
+	process_mode = PROCESS_MODE_PAUSABLE if value else PROCESS_MODE_DISABLED
 
 func _get_enabled():
 	if is_inside_tree():
