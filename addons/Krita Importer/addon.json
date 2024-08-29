@@ -1,0 +1,11 @@
+{
+    "name": "Krita Importer",
+    "isProject": false,
+    "description": "Krita Importer",
+    "category": "Misc",
+    "godotVersion": "4.x",
+    "version": "1.0.0",
+    "icon": "Icon.png",
+    "dependencies": [],
+    "ignore": []
+}
