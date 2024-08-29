@@ -17,8 +17,8 @@ signal transition_requested(state: State)
 @export var is_enabled: bool = true : set = _set_enabled, get = _get_enabled
 
 func _set_enabled(value: bool):
-	is_enabled = value
 	process_mode = PROCESS_MODE_PAUSABLE if value else PROCESS_MODE_DISABLED
+	is_enabled = value
 
 func _get_enabled():
 	if is_inside_tree():
@@ -35,7 +35,7 @@ func _disabled():
 ## Call this function to request a transition to another state.
 ## This will emit the [signal State.transition_requested] signal.
 func request_transition():
-	emit_signal("transition_requested", self)
+	transition_requested.emit(self)
 
 func _notification(what):
 	if what == NOTIFICATION_READY:
@@ -44,8 +44,8 @@ func _notification(what):
 	if  what == NOTIFICATION_ENTER_TREE or what == NOTIFICATION_UNPAUSED:
 		if is_enabled:
 			_enabled()
-			emit_signal("enabled")
+			enabled.emit()
 	elif what == NOTIFICATION_EXIT_TREE or what == NOTIFICATION_PAUSED:
-		if is_enabled:
+		if not is_enabled:
 			_disabled()
-			emit_signal("disabled")
+			disabled.emit()

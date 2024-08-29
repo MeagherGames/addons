@@ -42,9 +42,9 @@ func auto_transition():
 		expression == ""
 	):
 		return
-	
-	if _expression.execute([], context):
-		request_transition()
+	if context and context.is_node_ready():
+		if _expression.execute([], context):
+			request_transition()
 
 func _on_child_added(child):
 	if child is State:
