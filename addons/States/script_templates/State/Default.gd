@@ -1,17 +1,13 @@
 extends State
 
-# Basic state template
+# A State is a piece of logic that only runs when it is active.
+# State uses the pause mode to control when the state is active.
+# You can process with _process and _physics_process while the state is active.
 
-func enter():
+# Called when the state is entered or made active.
+func _enabled():
     pass
 
-func exit():
+# Called when the state is exited or made inactive.
+func _disabled():
     pass
-
-func update(delta):
-    pass
-
-func physics_update(delta):
-    pass
-
-

@@ -71,6 +71,10 @@ func _add_player(device:int) -> void:
 		# If player 0 changed to a controller, switch all joystick actions to be controlled by the new controller
 		_set_core_actions_joy_device()
 
+	if first_invalid == 0:
+		# If player 0 changed to a controller, switch all joystick actions to be controlled by the new controller
+		_set_core_actions_joy_device()
+
 func _remove_player(device:int) -> void:
 	var index = player_devices.find(device)
 	if index == 0:
