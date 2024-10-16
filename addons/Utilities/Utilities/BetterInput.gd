@@ -80,6 +80,8 @@ func _remove_player(device:int) -> void:
 	if index == 0:
 		# if player 1 was the device, replace it with keyboard
 		player_devices[0] = -1
+		# Stop the joystick from controlling core actions
+		_set_core_actions_joy_device() 
 		player_removed.emit(0)
 	elif index > 0:
 		player_devices[index] = JOY_DEVICE_INVALID
