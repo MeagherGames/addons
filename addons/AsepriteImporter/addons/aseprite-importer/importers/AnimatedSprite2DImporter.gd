@@ -51,16 +51,9 @@ func _import(source_file, save_path, options, _platform_variants, _gen_files):
 		if ase_animation.autoplay:
 			animation_sprite_2d.autoplay = ase_animation.name
 
-		var frames = layer.get_animation_data(ase_animation).frames
+		var data = layer.get_animation_data(ase_animation)
 
-		if ase_animation.loop_mode == Animation.LOOP_PINGPONG:
-			var reversed_frames = frames.slice(1, frames.size() - 1)
-			reversed_frames.reverse()
-			frames = frames + reversed_frames
-		if ase_animation.reverse:
-			frames.reverse()
-
-		for frame_data in frames:
+		for frame_data in data.frames:
 			var texture = AtlasTexture.new()
 			texture.atlas = aseprite_file.texture
 			texture.region = frame_data.region

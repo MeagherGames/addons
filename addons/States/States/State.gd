@@ -38,7 +38,7 @@ func request_transition():
 	transition_requested.emit(self)
 
 func _notification(what):
-	if what == NOTIFICATION_READY:
+	if what == NOTIFICATION_ENTER_TREE:
 		_set_enabled(is_enabled)
 	
 	if  what == NOTIFICATION_ENTER_TREE or what == NOTIFICATION_UNPAUSED:
