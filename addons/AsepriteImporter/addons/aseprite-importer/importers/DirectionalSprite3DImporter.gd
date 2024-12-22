@@ -20,9 +20,9 @@ func _get_import_order(): return 0
 
 func _get_priority(): return 1
 
-func _get_preset_name(preset:int): return "Default"
+func _get_preset_name(_preset:int): return "Default"
 
-func _get_import_options(path:String, preset:int): return []
+func _get_import_options(_path:String, _preset:int): return []
 
 var track_paths_by_direction = {
 	"left": ".:left_region",
@@ -68,7 +68,7 @@ func _parse_directions(animation:Aseprite.AsepriteFile.AsepriteAnimation) -> Dic
 		"flips": flips,
 	}
 
-func _import(source_file, save_path, options, platform_variants, gen_files):
+func _import(source_file, save_path, options, _platform_variants, _gen_files):
 	var aseprite_file = Aseprite.load_file(source_file, options)
 	var path = save_path + "." + _get_save_extension()
 
@@ -77,11 +77,6 @@ func _import(source_file, save_path, options, platform_variants, gen_files):
 
 	if aseprite_file.has_layers():
 		printerr("DirectionalSprite3D does not support layers")
-		return FAILED
-	
-	var scene:PackedScene = PackedScene.new()
-	# Save an empty scene that will be resaved later
-	if ResourceSaver.save(scene, path) != OK:
 		return FAILED
 
 	var directional_sprite_3d:DirectionalSprite3D = DirectionalSprite3D.new()
@@ -95,12 +90,6 @@ func _import(source_file, save_path, options, platform_variants, gen_files):
 	directional_sprite_3d.add_child(animation_player)
 	animation_player.name = "AnimationPlayer"
 	animation_player.owner = directional_sprite_3d
-
-	# TODO: Implement animations
-	# Any animation that ends with `-{left|right|front|back}` will be considered a directional animation
-	# directional animations will be grouped by the name before the `-` 
-	# The firections will correspond to the regions in the directional sprite 3d
-	# and each region will be a track in the animation with the name before the `-` as the animation name
 
 	var animation_library:AnimationLibrary = AnimationLibrary.new()
 	animation_player.add_animation_library("", animation_library)
@@ -155,7 +144,6 @@ func _import(source_file, save_path, options, platform_variants, gen_files):
 
 		flips = flips.map(func(x): return track_paths_by_direction[x])
 
-		var duration = animation.length
 		var animation_data = layer.get_animation_data(ase_animation)
 		animation.length = animation_data.length
 		for i in animation_data.frames.size():
@@ -183,7 +171,6 @@ func _import(source_file, save_path, options, platform_variants, gen_files):
 					var property = track_path.split(":")[1]
 					directional_sprite_3d.set(property, r)
 
+	var scene:PackedScene = PackedScene.new()
 	scene.pack(directional_sprite_3d)
-	# Done
-	ResourceSaver.save.call_deferred(scene, path)
-	return OK
+	return ResourceSaver.save(scene, path)

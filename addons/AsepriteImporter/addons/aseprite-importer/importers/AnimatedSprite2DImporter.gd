@@ -19,11 +19,11 @@ func _get_import_order(): return 0
 
 func _get_priority(): return 1
 
-func _get_preset_name(preset:int): return "Default"
+func _get_preset_name(_preset:int): return "Default"
 
-func _get_import_options(path:String, preset:int): return []
+func _get_import_options(_path:String, _preset:int): return []
 
-func _import(source_file, save_path, options, platform_variants, gen_files):
+func _import(source_file, save_path, options, _platform_variants, _gen_files):
 	var aseprite_file = Aseprite.load_file(source_file, options)
 	var path = save_path + "." + _get_save_extension()
 
@@ -32,11 +32,6 @@ func _import(source_file, save_path, options, platform_variants, gen_files):
 
 	if aseprite_file.has_layers():
 		printerr("AnimatedSprite2D does not support layers")
-		return FAILED
-	
-	var scene:PackedScene = PackedScene.new()
-	# Save an empty scene that will be resaved later
-	if ResourceSaver.save(scene, path) != OK:
 		return FAILED
 
 	var animation_sprite_2d:AnimatedSprite2D = AnimatedSprite2D.new()
@@ -56,16 +51,9 @@ func _import(source_file, save_path, options, platform_variants, gen_files):
 		if ase_animation.autoplay:
 			animation_sprite_2d.autoplay = ase_animation.name
 
-		var frames = layer.get_animation_data(ase_animation).frames
+		var data = layer.get_animation_data(ase_animation)
 
-		if ase_animation.loop_mode == Animation.LOOP_PINGPONG:
-			var reversed_frames = frames.slice(1, frames.size() - 1)
-			reversed_frames.reverse()
-			frames = frames + reversed_frames
-		if ase_animation.reverse:
-			frames.reverse()
-
-		for frame_data in frames:
+		for frame_data in data.frames:
 			var texture = AtlasTexture.new()
 			texture.atlas = aseprite_file.texture
 			texture.region = frame_data.region
@@ -73,8 +61,6 @@ func _import(source_file, save_path, options, platform_variants, gen_files):
 	
 	animation_sprite_2d.frames = sprite_frames
 
+	var scene:PackedScene = PackedScene.new()
 	scene.pack(animation_sprite_2d)
-
-	# Done
-	ResourceSaver.save.call_deferred(scene, path)
-	return OK
+	return ResourceSaver.save(scene, path)

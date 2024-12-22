@@ -19,11 +19,11 @@ func _get_import_order(): return 0
 
 func _get_priority(): return 1
 
-func _get_preset_name(preset:int): return "Default"
+func _get_preset_name(_preset:int): return "Default"
 
-func _get_import_options(path:String, preset:int): return []
+func _get_import_options(_path:String, _preset:int): return []
 
-func _import(source_file, save_path, options, platform_variants, gen_files):
+func _import(source_file, save_path, options, _platform_variants, _gen_files):
 	var aseprite_file = Aseprite.load_file(source_file, options)
 	var path = save_path + "." + _get_save_extension()
 
@@ -59,7 +59,5 @@ func _import(source_file, save_path, options, platform_variants, gen_files):
 			texture.atlas = aseprite_file.texture
 			texture.region = frame_data.region
 			sprite_frames.add_frame(ase_animation.name, texture, frame_data.duration)
-
-	# Done
-	ResourceSaver.save.call_deferred(sprite_frames, path)
-	return OK
+	
+	return ResourceSaver.save(sprite_frames, path)

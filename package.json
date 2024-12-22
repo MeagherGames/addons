@@ -7,6 +7,6 @@
     "create": "node scripts/create.js"
   },
   "dependencies": {
-    "archiver": "^5.3.1"
+    "archiver": "^5.3.2"
   }
 }
