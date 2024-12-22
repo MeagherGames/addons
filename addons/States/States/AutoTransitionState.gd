@@ -7,7 +7,7 @@ enum UpdateMode {
 }
 
 @export var context:Node = null
-@export var expression:String = "" :
+@export_multiline var expression:String = "" :
 	set(value):
 		expression = value
 		_update_expression()
@@ -26,8 +26,27 @@ func _set_enabled(value:bool):
 		if child is State:
 			child.is_enabled = value
 
+func _get_extra_expression_keys() -> Array[String]:
+	var keys:Array[String] = []
+	for prop in ProjectSettings.get_property_list():
+		if prop.name.begins_with("autoload/"):
+			var name = prop.name.split("/")[1]
+			keys.append(name)
+	return keys
+
+func _get_extra_expression_values() -> Array[Variant]:
+	var values:Array[Variant] = []
+	for prop in ProjectSettings.get_property_list():
+		if prop.name.begins_with("autoload/"):
+			var name = prop.name.split("/")[1]
+			values.append(
+				get_tree().root.get_node(name)
+			)
+		
+	return values
+
 func _update_expression():
-	if _expression.parse(expression) != OK:
+	if _expression.parse(expression, _get_extra_expression_keys()) != OK:
 		_expression_is_valid = false
 		printerr(_expression.get_error_text())
 		return
@@ -43,7 +62,7 @@ func test_transition():
 	):
 		return
 	if context and context.is_node_ready():
-		if _expression.execute([], context):
+		if _expression.execute(_get_extra_expression_values(), context):
 			request_transition()
 
 func _on_child_added(child):
