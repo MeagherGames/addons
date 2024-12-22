@@ -10,6 +10,11 @@ func _on_child_added(child):
 	if child is State:
 		if not child.transition_requested.is_connected(_on_child_transition):
 			child.transition_requested.connect(_on_child_transition)
+			if current_state == child:
+				child.is_enabled = true
+			else:
+				child.is_enabled = false
+	
 
 func _on_child_transition(new_state:State):
 	if new_state == current_state:

@@ -4,8 +4,6 @@ class_name UtilitySelectState extends SelectState
 ## The utility select state selects a child state based on the utility of the child [UtilityState].
 ## If the child is not a [UtilityState] but still a [State], it's utility is considered to be 0. This can be used to have a fallback state.
 
-signal completed()
-
 enum UpdateMode {
 	IDLE,
 	PHYSICS,
@@ -31,26 +29,16 @@ enum UpdateMode {
 
 var rng:RandomNumberGenerator = RandomNumberGenerator.new()
 
-func _on_child_completed():
-	emit_signal("completed")
-	if continue_after_completion:
-		select_next_state()
-
-func _on_child_added(child):
-	super._on_child_added(child)
-	if child is UtilityState:
-		child.completed.connect(_on_child_completed)
-
+@warning_ignore("unused_parameter")
 func _on_child_transition(new_state:State):
-	if new_state == null:
-		select_next_state()
+	if new_state is UtilityState:
+		select_next_state()	
 	else:
 		super._on_child_transition(new_state)
 
 func select_next_state():
 	var queue = PriorityQueue.new(true) # max heap
 	
-	var child_bias = remap(1.0 / float(get_child_count()), 0.0, 1.0, 1.0, 0.999)
 	for child in get_children():
 		if not child is State:
 			continue
@@ -58,16 +46,15 @@ func select_next_state():
 		var utility = 0.0
 		if child is UtilityState:
 			if child.should_consider():
-				utility = child._internal_get_utility()
+				utility = child.get_utility()
 			else:
 				continue
 
 		if not is_finite(utility):
 			# if the utility is Infinity we can immediately select the child
-			_on_child_transition(child)
+			super._on_child_transition(child)
 			return
-		
-		utility *= child_bias
+
 
 		# bias towards children with lower index
 		if children_order_bias > 0.0:
@@ -81,7 +68,7 @@ func select_next_state():
 	
 	var select_count = min(select_from_top, queue.size())
 	if select_count == 1:
-		_on_child_transition(queue.pop())
+		super._on_child_transition(queue.pop())
 		return
 
 	var top:Array = []
@@ -92,7 +79,7 @@ func select_next_state():
 		if seed == -1:
 			rng.randomize()
 		var best_child = rng.randi_range(0, top.size() - 1)
-		_on_child_transition(top[best_child])
+		super._on_child_transition(top[best_child])
 
 func _notification(what):
 	if what == NOTIFICATION_READY:

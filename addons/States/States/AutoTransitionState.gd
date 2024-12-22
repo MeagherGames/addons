@@ -17,14 +17,14 @@ var _expression:Expression = Expression.new()
 var _expression_is_valid:bool = false
 
 func _set_enabled(value:bool):
+	if is_enabled == value:
+		return
+	
 	is_enabled = value
 	process_mode = PROCESS_MODE_ALWAYS
 	for child in get_children():
 		if child is State:
 			child.is_enabled = value
-
-func _get_enabled():
-	return is_enabled
 
 func _update_expression():
 	if _expression.parse(expression) != OK:
@@ -33,7 +33,7 @@ func _update_expression():
 		return
 	_expression_is_valid = true
 	
-func auto_transition():
+func test_transition():
 	if (
 		not _expression_is_valid or
 		not is_inside_tree() or
@@ -42,17 +42,17 @@ func auto_transition():
 		expression == ""
 	):
 		return
-	
-	if _expression.execute([], context):
-		request_transition()
+	if context and context.is_node_ready():
+		if _expression.execute([], context):
+			request_transition()
 
 func _on_child_added(child):
 	if child is State:
-		child.is_enabled = is_enabled
+		child.is_enabled = is_active()
 
 func _notification(what):
 	if what == NOTIFICATION_READY:
-		auto_transition()
+		test_transition()
 		if update_mode == UpdateMode.IDLE:
 			set_process(true)
 		elif update_mode == UpdateMode.PHYSICS:
@@ -67,4 +67,4 @@ func _notification(what):
 		(what == NOTIFICATION_PROCESS and update_mode == UpdateMode.IDLE) or
 		(what == NOTIFICATION_PHYSICS_PROCESS and update_mode == UpdateMode.PHYSICS)
 	):
-		auto_transition()
+		test_transition()
