@@ -18,16 +18,15 @@ signal transition_requested(state: State)
 
 func _set_enabled(value: bool):
 	if value:
-		process_mode = PROCESS_MODE_PAUSABLE
-		enabled.emit()
+		process_mode = PROCESS_MODE_INHERIT
+		if is_active(): enabled.emit()
 	else:
 		process_mode = PROCESS_MODE_DISABLED
 		disabled.emit()
-	
 	is_enabled = value
 
 func is_active() -> bool:
-	return is_enabled && process_mode != PROCESS_MODE_DISABLED
+	return is_enabled and process_mode != PROCESS_MODE_DISABLED
 
 ## Call this function to request a transition to another state.
 ## This will emit the [signal State.transition_requested] signal.
