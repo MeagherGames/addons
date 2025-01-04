@@ -28,26 +28,28 @@ class AsepriteAnimation extends RefCounted:
 	var name:String
 	var from:int
 	var to:int
-	var loop_mode:Animation.LoopMode = Animation.LOOP_LINEAR
+	var loop_mode:Animation.LoopMode = Animation.LOOP_NONE
 	var reverse:bool = false
 	var autoplay:bool = false
 	var data:PackedStringArray = []
 
 	func _init(animation_data:Dictionary):
 		self.name = animation_data.name
+
+		_init_data(animation_data.get("data", ""))
+
 		if animation_data.has("direction"):    
 			var direction = animation_data.get("direction")
-			self.loop_mode = AsepriteAnimation.AsepriteLoopMode.get(
-				direction,
-				Animation.LOOP_LINEAR
-			)
+			if not self.data.has("no_loop"):	
+				self.loop_mode = AsepriteAnimation.AsepriteLoopMode.get(
+					direction,
+					Animation.LOOP_LINEAR
+				)
 			self.reverse = direction.ends_with("reverse")
 		self.autoplay = animation_data.get("autoplay", false)
 
 		self.from = animation_data.get("from", 0)
 		self.to = animation_data.get("to", -1)
-		
-		_init_data(animation_data.get("data", ""))
 		
 		if not self.autoplay:
 			self.autoplay = self.data.has("autoplay")

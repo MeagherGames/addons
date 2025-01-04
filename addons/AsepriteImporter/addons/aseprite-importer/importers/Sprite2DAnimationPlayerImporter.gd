@@ -52,7 +52,10 @@ func _import(source_file, save_path, options, _platform_variants, _gen_files):
 		animation.loop_mode = ase_animation.loop_mode
 		var data = layer.get_animation_data(ase_animation)
 		var frame_track = animation.add_track(Animation.TYPE_VALUE)
+		animation.value_track_set_update_mode(frame_track, Animation.UPDATE_DISCRETE)
+		animation.track_set_interpolation_loop_wrap(frame_track, false)
 		animation.track_set_path(frame_track, ".:frame")
+		
 
 		for i in data.frames.size():
 			animation.track_insert_key(

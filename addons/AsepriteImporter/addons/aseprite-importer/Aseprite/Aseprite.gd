@@ -117,6 +117,7 @@ static func load_file(filepath:String, options:Dictionary = {}) -> AsepriteFile:
 	
 	# See https://www.aseprite.org/docs/cli/
 	var arguments = [
+		# "--debug", # Enable debug mode
 		"--batch", # Don't open UI
 		"--format", "json-array", # export data as json
 		"--list-tags" # get animation tags
@@ -130,7 +131,6 @@ static func load_file(filepath:String, options:Dictionary = {}) -> AsepriteFile:
 
 	arguments.append_array([
 		"--data", data_path,
-		"--sheet-type", "packed",
 		"--sheet", sheet_path,
 		global_filepath
 	])
