@@ -1,0 +1,11 @@
+{
+    "name": "BackgroundColor2D",
+    "isProject": false,
+    "description": "This node allows you to set the background color of a 2D scene",
+    "category": "Misc",
+    "godotVersion": "4.x",
+    "version": "1.0.0",
+    "icon": "Icon.png",
+    "dependencies": [],
+    "ignore": []
+}
