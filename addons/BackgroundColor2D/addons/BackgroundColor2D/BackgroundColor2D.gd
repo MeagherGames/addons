@@ -29,10 +29,10 @@ func _unset() -> void:
 
 func _notification(what: int) -> void:
     match what:
-        NOTIFICATION_ENTER_TREE, NOTIFICATION_ENTER_CANVAS, NOTIFICATION_VISIBILITY_CHANGED:
+        NOTIFICATION_ENTER_TREE, NOTIFICATION_ENTER_CANVAS, NOTIFICATION_VISIBILITY_CHANGED, NOTIFICATION_EDITOR_POST_SAVE:
             if is_visible_in_tree(): _set_color(color)
             else: _unset()
-        NOTIFICATION_EXIT_TREE, NOTIFICATION_EXIT_CANVAS:
+        NOTIFICATION_EXIT_TREE, NOTIFICATION_EXIT_CANVAS, NOTIFICATION_EDITOR_PRE_SAVE:
             _unset()
         _:
             pass
