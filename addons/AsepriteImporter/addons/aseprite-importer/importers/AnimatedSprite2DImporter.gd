@@ -45,7 +45,7 @@ func _import(source_file, save_path, options, _platform_variants, _gen_files):
 	var layer = aseprite_file.layers[0]
 	for ase_animation in aseprite_file.animations:
 		sprite_frames.add_animation(ase_animation.name)
-		sprite_frames.set_animation_loop(ase_animation.name, true)
+		sprite_frames.set_animation_loop(ase_animation.name, ase_animation.loop_mode != Animation.LOOP_NONE)
 		sprite_frames.set_animation_speed(ase_animation.name, 1.0)
 
 		if ase_animation.autoplay:
