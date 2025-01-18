@@ -183,7 +183,9 @@ func _init_frames(data:Dictionary) -> void:
 			layers[layer_index].position = Vector2(hframe, vframe)
 		layers[layer_index].frames.append(frame)
 
-	frame_size = Vector2(size.x / (hframes + 1), size.y / (vframes + 1))
+	hframes += 1
+	vframes += 1
+	frame_size = Vector2(size.x / hframes, size.y / vframes)
 
 func has_layers() -> bool:
 	return layers.size() > 1
