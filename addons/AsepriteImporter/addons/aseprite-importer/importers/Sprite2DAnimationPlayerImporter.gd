@@ -38,8 +38,8 @@ func _import(source_file, save_path, options, _platform_variants, _gen_files):
 	sprite_2d.name = aseprite_file.name
 	
 	sprite_2d.texture = aseprite_file.texture
-	sprite_2d.hframes = aseprite_file.hframes + 1
-	sprite_2d.vframes = aseprite_file.vframes + 1
+	sprite_2d.hframes = aseprite_file.hframes
+	sprite_2d.vframes = aseprite_file.vframes
 	
 	var animation_player:AnimationPlayer = AnimationPlayer.new()
 	var animation_library:AnimationLibrary = AnimationLibrary.new()

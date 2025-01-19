@@ -49,7 +49,7 @@ func _import(source_file, save_path, options, _platform_variants, _gen_files):
 		sprite_frames.set_animation_speed(ase_animation.name, 1.0)
 
 		if ase_animation.autoplay:
-			animation_sprite_2d.autoplay = ase_animation.name
+			animation_sprite_2d.autoplay = StringName(ase_animation.name)
 
 		var data = layer.get_animation_data(ase_animation)
 
