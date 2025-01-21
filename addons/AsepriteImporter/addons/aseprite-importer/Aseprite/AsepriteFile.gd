@@ -118,8 +118,8 @@ var user_data:Array # The user data for the sprite sheet
 var texture:Texture2D # The texture of the sprite sheet
 var size:Vector2 # The size of the sprite sheet
 var frame_size:Vector2 # The size of each frame
-var hframes:int = 0 # The number of horizontal frames
-var vframes:int = 0 # The number of vertical frames
+var hframes:int = 1 # The number of horizontal frames
+var vframes:int = 1 # The number of vertical frames
 
 var layers:Array[AsepriteLayer] # The layers in the sprite sheet
 var animations:Array[AsepriteAnimation] # The animations in the sprite sheet
@@ -168,8 +168,8 @@ func _init_frames(data:Dictionary) -> void:
 		var layer_index = int(i / frames_per_layer)
 		var frame_layer_index = i % frames_per_layer
 		var frame_data = data.frames[i]
-		var hframe = int(frame_data.frame.x) / w
-		var vframe = int(frame_data.frame.y) / h
+		var hframe = int(frame_data.frame.x) / w + 1
+		var vframe = int(frame_data.frame.y) / h + 1
 
 		hframes = max(hframes, hframe)
 		vframes = max(vframes, vframe)
@@ -183,8 +183,6 @@ func _init_frames(data:Dictionary) -> void:
 			layers[layer_index].position = Vector2(hframe, vframe)
 		layers[layer_index].frames.append(frame)
 
-	hframes += 1
-	vframes += 1
 	frame_size = Vector2(size.x / hframes, size.y / vframes)
 
 func has_layers() -> bool:
