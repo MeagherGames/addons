@@ -14,7 +14,7 @@ class AsepriteFrame extends RefCounted:
 		self.region = Rect2(
 			frame_data.frame.x, frame_data.frame.y,
 			frame_data.frame.w, frame_data.frame.h
-		)
+		).abs()
 		self.position = Vector2(frame_data.frame.x, frame_data.frame.y)
 
 class AsepriteAnimation extends RefCounted:
@@ -70,6 +70,7 @@ class AsepriteLayer extends RefCounted:
 	var opacity:float
 	var blend_mode:String
 	var position:Vector2 = Vector2.INF
+	var region:Rect2
 	var frames:Array[AsepriteFrame] = []
 
 	func _init(layer_data:Dictionary):
@@ -140,7 +141,7 @@ func _init_layers(data:Dictionary) -> void:
 	if data.meta.has("layers"):
 		for layer_data in data.meta.layers:
 			var layer = AsepriteLayer.new(layer_data)
-			layers.append(layer)
+			layers.insert(0, layer)
 	else:
 		var layer = AsepriteLayer.new({"name":"default"})
 		layers.append(layer)
@@ -182,6 +183,8 @@ func _init_frames(data:Dictionary) -> void:
 		if not layers[layer_index].position.is_finite():
 			layers[layer_index].position = Vector2(hframe, vframe)
 		layers[layer_index].frames.append(frame)
+		if layers[layer_index].region.size.is_zero_approx():
+			layers[layer_index].region = frame.region
 
 	frame_size = Vector2(size.x / hframes, size.y / vframes)
 
