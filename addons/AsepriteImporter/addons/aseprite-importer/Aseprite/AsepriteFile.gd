@@ -141,7 +141,7 @@ func _init_layers(data:Dictionary) -> void:
 	if data.meta.has("layers"):
 		for layer_data in data.meta.layers:
 			var layer = AsepriteLayer.new(layer_data)
-			layers.insert(0, layer)
+			layers.append(layer)
 	else:
 		var layer = AsepriteLayer.new({"name":"default"})
 		layers.append(layer)
@@ -166,7 +166,7 @@ func _init_frames(data:Dictionary) -> void:
 	var h:int = int(data.frames[0].frame.h)
 
 	for i in data.frames.size():
-		var layer_index = -int(i / frames_per_layer) - 1 # reverse order
+		var layer_index = int(i / frames_per_layer)
 		var frame_layer_index = i % frames_per_layer
 		var frame_data = data.frames[i]
 		var hframe = int(frame_data.frame.x) / w + 1
