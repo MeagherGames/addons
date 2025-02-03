@@ -26,10 +26,16 @@ func _get_import_options(_path:String, _preset:int) -> Array[Dictionary]:
 		{
 			"name":"split_layers",
 			"default_value": false,
+		},
+		{
+			"name":"groups",
+			"default_value": true,
 		}
 	]
 
 func _get_option_visibility(path:String, option_name:StringName, options:Dictionary) -> bool:
+	if option_name == "groups":
+		return options.get("split_layers", false)
 	return true
 
 func _import(source_file, save_path, options, _platform_variants, _gen_files):
@@ -48,6 +54,8 @@ func _import(source_file, save_path, options, _platform_variants, _gen_files):
 	var root:Node
 	if has_layers:
 		root = CanvasGroup.new()
+		root.fit_margin = 0
+		root.clear_margin = 0
 	else:
 		root = Sprite2D.new()
 	
@@ -56,10 +64,7 @@ func _import(source_file, save_path, options, _platform_variants, _gen_files):
 	for layer in aseprite_file.layers:
 		var sprite_2d:Sprite2D
 		if has_layers:
-			sprite_2d = Sprite2D.new()
-			sprite_2d.name = layer.name
-			root.add_child(sprite_2d, true)
-			sprite_2d.owner = root
+			sprite_2d = add_layer(layer, root, options.get("groups", false)) as Sprite2D
 		else:
 			sprite_2d = root as Sprite2D
 		
@@ -84,7 +89,8 @@ func _import(source_file, save_path, options, _platform_variants, _gen_files):
 			animation.track_set_interpolation_loop_wrap(frame_track, false)
 			var track_path = ".:region_rect"
 			if has_layers:
-				track_path = "./{layer_name}:region_rect".format({"layer_name": layer.name})
+				var layer_path = get_layer_node_path(layer, options.get("groups", false))
+				track_path = "%s:region_rect" % layer_path
 			animation.track_set_path(frame_track, track_path)
 			
 			for i in data.frames.size():
@@ -109,3 +115,38 @@ func _import(source_file, save_path, options, _platform_variants, _gen_files):
 	var scene:PackedScene = PackedScene.new()
 	var result = scene.pack(root)
 	return ResourceSaver.save(scene, path)
+
+func get_layer_node_path(layer, groups:bool = false) -> String:
+	var group = layer.group
+	if groups and group:
+		return "./{group}/{name}".format({
+			"group": group,
+			"name": layer.name
+		})
+	
+	return "./{name}".format({
+		"name": layer.name
+	})
+
+func add_layer(layer, root:Node, groups:bool = false) -> Node:
+	var group = layer.group
+	var layer_node = Sprite2D.new()
+	layer_node.name = layer.name
+
+	if groups and group:
+		var group_node = root
+		for group_name in group.split("/"):
+			var next_group = group_node.get_node_or_null(group_name)
+			if next_group == null:
+				next_group = Node2D.new()
+				next_group.name = group_name
+				group_node.add_child(next_group, true)
+				next_group.owner = root
+			group_node = next_group
+		group_node.add_child(layer_node, true)
+		layer_node.owner = root
+	else:
+		root.add_child(layer_node, true)
+		layer_node.owner = root
+
+	return layer_node

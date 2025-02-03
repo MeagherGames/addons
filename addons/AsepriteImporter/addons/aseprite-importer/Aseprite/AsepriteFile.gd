@@ -72,6 +72,7 @@ class AsepriteLayer extends RefCounted:
 	var position:Vector2 = Vector2.INF
 	var region:Rect2
 	var frames:Array[AsepriteFrame] = []
+	var group:String = ""
 
 	func _init(layer_data:Dictionary):
 		self.name = layer_data.name
@@ -138,10 +139,35 @@ func _init(image:Image, data:Dictionary, user_data:Array):
 	_init_frames(data)
 
 func _init_layers(data:Dictionary) -> void:
+	var ase_group_stack = []
+	var ase_group_count = {}
+
 	if data.meta.has("layers"):
 		for layer_data in data.meta.layers:
-			var layer = AsepriteLayer.new(layer_data)
-			layers.append(layer)
+			if layer_data.get("blendMode") == null and layer_data.get("opacity") == null:
+				# This a group
+				if ase_group_count.has(layer_data.name):
+					ase_group_count[layer_data.name] += 1
+				else:
+					ase_group_count[layer_data.name] = 1
+				
+				var group_name = layer_data.name
+				if ase_group_count[layer_data.name] > 1:
+					group_name += str(ase_group_count[layer_data.name])
+				ase_group_stack.append(group_name)
+			else:
+				var group_name = ""
+				if layer_data.get("group"):
+					# Ensure we're at the right group in the stack
+					while ase_group_stack.size() > 0 and not ase_group_stack[-1].begins_with(layer_data.group):
+						ase_group_stack.pop_back()
+					group_name = "/".join(ase_group_stack)
+				else:
+					ase_group_stack.clear()
+				
+				var layer = AsepriteLayer.new(layer_data)
+				layer.group = group_name
+				layers.append(layer)
 	else:
 		var layer = AsepriteLayer.new({"name":"default"})
 		layers.append(layer)
