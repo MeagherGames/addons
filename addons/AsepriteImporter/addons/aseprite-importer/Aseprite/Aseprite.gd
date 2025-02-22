@@ -7,22 +7,22 @@ static func get_global_filepath(filepath) -> String:
 	return ProjectSettings.globalize_path(filepath)
 
 static func get_data_path(filepath) -> String:
-	var name:String = filepath.get_file()
+	var name: String = filepath.get_file()
 	return OS.get_cache_dir().path_join("%s/%s-data.json" % [ProjectSettings.get_setting("application/config/name"), name])
 
 static func get_sheet_path(filepath) -> String:
-	var name:String = filepath.get_file()
+	var name: String = filepath.get_file()
 	return OS.get_cache_dir().path_join("%s/%s-sheet.png" % [ProjectSettings.get_setting("application/config/name"), name])
 
-static func get_user_data_path(filepath) -> String:
-	var name:String = filepath.get_file()
-	return OS.get_cache_dir().path_join("%s/%s-user-data.json" % [ProjectSettings.get_setting("application/config/name"), name])
+static func get_extra_data_path(filepath) -> String:
+	var name: String = filepath.get_file()
+	return OS.get_cache_dir().path_join("%s/%s-extra-data.json" % [ProjectSettings.get_setting("application/config/name"), name])
 
 static func get_tile_set_data_path(filepath) -> String:
-	var name:String = filepath.get_file()
+	var name: String = filepath.get_file()
 	return OS.get_cache_dir().path_join("%s/%s-tile-set-data.json" % [ProjectSettings.get_setting("application/config/name"), name])
 
-static func test_aseprite_path(file_path:String) -> bool:
+static func test_aseprite_path(file_path: String) -> bool:
 	if file_path == "":
 		return false
 	if execute(file_path, ["--version"]) != OK:
@@ -37,10 +37,10 @@ static func find_aseprite() -> String:
 		if test_aseprite_path(aseprite_path):
 			return aseprite_path
 
-	var locations:PackedStringArray = []
+	var locations: PackedStringArray = []
 	match OS.get_name():
 		"Windows":
-			var output = [ ]
+			var output = []
 			OS.execute("cmd", ["/c", "ftype", "AsepriteFile"], output, true)
 			for ftype in output:
 				var exe_path = ftype.split("=", false, 1)[1]
@@ -79,19 +79,24 @@ static func find_aseprite() -> String:
 	})
 	return ""
 
-static func execute(command:String, arguments:Array = [], print_output = false) -> int:
-	var res:int = -1
+static func execute(command: String, arguments: Array = [], print_output = false) -> int:
+	var res: int = OK
 	if print_output:
+		print("Executing \"", command, "\" with arguments: ", arguments)
 		var output = []
+		arguments = arguments + [
+			"--debug", # Enable debug mode
+			"--verbose", # Enable verbose mode
+		]
 		res = OS.execute(command, arguments, output, true, true)
 		if res != OK:
-			printerr("Unable to execute \"", command,  "\" Error Code ", res, ":\n", "\n".join(PackedStringArray(output)))
+			printerr("Unable to execute \"", command, "\" Error Code ", res, ":\n", "\n".join(PackedStringArray(output)))
 	else:
 		res = OS.execute(command, arguments)
 	
 	return res
 
-static func execute_script(script_path:String, parameters:Dictionary = {}, print_output = false) -> int:
+static func execute_script(script_path: String, parameters: Dictionary = {}, print_output = false) -> int:
 	var aseprite_path = find_aseprite()
 	var arguments = [
 		"--batch", # Don't open UI
@@ -104,7 +109,7 @@ static func execute_script(script_path:String, parameters:Dictionary = {}, print
 	
 	return execute(aseprite_path, arguments, print_output)
 
-static func load_file(filepath:String, options:Dictionary = {}) -> AsepriteFile:
+static func load_file(filepath: String, options: Dictionary = {}) -> AsepriteFile:
 	var aseprite_path = find_aseprite()
 	if aseprite_path == "":
 		return null
@@ -112,12 +117,11 @@ static func load_file(filepath:String, options:Dictionary = {}) -> AsepriteFile:
 	var global_filepath = get_global_filepath(filepath)
 	var data_path = get_data_path(filepath)
 	var sheet_path = get_sheet_path(filepath)
-	var user_data_path = get_user_data_path(filepath)
-	var json:JSON = JSON.new()
+	var extra_data_path = get_extra_data_path(filepath)
+	var json: JSON = JSON.new()
 	
 	# See https://www.aseprite.org/docs/cli/
 	var arguments = [
-		# "--debug", # Enable debug mode
 		"--batch", # Don't open UI
 		"--format", "json-array", # export data as json
 		"--list-tags" # get animation tags
@@ -125,6 +129,7 @@ static func load_file(filepath:String, options:Dictionary = {}) -> AsepriteFile:
 
 	if options.get("split_layers", false):
 		arguments.append_array([
+			"--all-layers", # get all layers
 			"--list-layers", # get layer names
 			"--split-layers" # export each layer as a separate image
 		])
@@ -140,19 +145,19 @@ static func load_file(filepath:String, options:Dictionary = {}) -> AsepriteFile:
 		return null
 	
 	if execute_script(
-		ProjectSettings.globalize_path("res://addons/aseprite-importer/Aseprite/aseprite_scripts/user_data.lua"),
+		ProjectSettings.globalize_path("res://addons/aseprite-importer/Aseprite/aseprite_scripts/extra_data.lua"),
 		{
 			file_path = global_filepath,
-			output_path = user_data_path
+			output_path = extra_data_path
 		}
 	) != OK:
-		printerr("Unable to execute user data script")
+		printerr("Unable to execute extra data script")
 		return null
 	
-	# Sprite sheet, data, and user data into the AsepriteFile
-	var aseprite_file_image:Image = Image.load_from_file(sheet_path)
-	var aseprite_file_data:Dictionary
-	var aseprite_file_user_data:Array
+	# Sprite sheet, data, and extra data into the AsepriteFile
+	var aseprite_file_image: Image = Image.load_from_file(sheet_path)
+	var aseprite_file_data: Dictionary
+	var aseprite_file_extra_data: Dictionary
 
 	var data_file = FileAccess.open(data_path, FileAccess.READ)
 	if data_file == null:
@@ -165,17 +170,16 @@ static func load_file(filepath:String, options:Dictionary = {}) -> AsepriteFile:
 		return null
 	aseprite_file_data = json.data
 	
-	var user_data_file = FileAccess.open(user_data_path, FileAccess.READ)
-	if user_data_file == null:
-		printerr("Unable to open user data file ", user_data_path, " [Error ", FileAccess.get_open_error(), "]")
+	var extra_data_file = FileAccess.open(extra_data_path, FileAccess.READ)
+	if extra_data_file == null:
+		printerr("Unable to open extra data file ", extra_data_path, " [Error ", FileAccess.get_open_error(), "]")
 		return null
-	json.parse(user_data_file.get_as_text())
+	json.parse(extra_data_file.get_as_text())
 
 	if json.data == null:
-		printerr("Unable to parse JSON data ", user_data_path, json.get_error_message())
+		printerr("Unable to parse JSON data ", extra_data_path, json.get_error_message())
 		return null
 		
-	aseprite_file_user_data = json.data.user_data
-
+	aseprite_file_extra_data = json.data
 	# Normalize the data
-	return AsepriteFile.new(aseprite_file_image, aseprite_file_data, aseprite_file_user_data)
+	return AsepriteFile.new(aseprite_file_image, aseprite_file_data, aseprite_file_extra_data)

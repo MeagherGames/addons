@@ -11,7 +11,7 @@ func _get_recognized_extensions(): return ["aseprite", "ase"]
 
 func _get_save_extension(): return "tscn"
 
-func _get_resource_type():return "PackedScene"
+func _get_resource_type(): return "PackedScene"
 
 func _get_preset_count(): return 1
 
@@ -19,21 +19,21 @@ func _get_import_order(): return 0
 
 func _get_priority(): return 1
 
-func _get_preset_name(_preset:int): return "Default"
+func _get_preset_name(_preset: int): return "Default"
 
-func _get_import_options(_path:String, _preset:int) -> Array[Dictionary]:
+func _get_import_options(_path: String, _preset: int) -> Array[Dictionary]:
 	return [
 		{
-			"name":"split_layers",
+			"name": "split_layers",
 			"default_value": false,
 		},
 		{
-			"name":"groups",
+			"name": "groups",
 			"default_value": true,
 		}
 	]
 
-func _get_option_visibility(path:String, option_name:StringName, options:Dictionary) -> bool:
+func _get_option_visibility(path: String, option_name: StringName, options: Dictionary) -> bool:
 	if option_name == "groups":
 		return options.get("split_layers", false)
 	return true
@@ -51,7 +51,7 @@ func _import(source_file, save_path, options, _platform_variants, _gen_files):
 	# - use the current AnimationPlayer for all layers
 	var has_layers = aseprite_file.has_layers()
 	
-	var root:Node
+	var root: Node
 	if has_layers:
 		root = CanvasGroup.new()
 		root.fit_margin = 0
@@ -62,7 +62,7 @@ func _import(source_file, save_path, options, _platform_variants, _gen_files):
 	root.name = aseprite_file.name
 
 	for layer in aseprite_file.layers:
-		var sprite_2d:Sprite2D
+		var sprite_2d: Sprite2D
 		if has_layers:
 			sprite_2d = add_layer(layer, root, options.get("groups", false)) as Sprite2D
 		else:
@@ -73,12 +73,12 @@ func _import(source_file, save_path, options, _platform_variants, _gen_files):
 		sprite_2d.region_filter_clip_enabled = true
 		sprite_2d.region_rect = layer.region
 	
-	var animation_player:AnimationPlayer = AnimationPlayer.new()
-	var animation_library:AnimationLibrary = AnimationLibrary.new()
+	var animation_player: AnimationPlayer = AnimationPlayer.new()
+	var animation_library: AnimationLibrary = AnimationLibrary.new()
 	var autoplay_animation = ""
 
 	for ase_animation in aseprite_file.animations:
-		var animation:Animation = Animation.new()
+		var animation: Animation = Animation.new()
 		animation.loop_mode = ase_animation.loop_mode
 		animation.length = 0.0
 
@@ -112,11 +112,11 @@ func _import(source_file, save_path, options, _platform_variants, _gen_files):
 	animation_player.current_animation = autoplay_animation
 	animation_player.autoplay = autoplay_animation
 	
-	var scene:PackedScene = PackedScene.new()
+	var scene: PackedScene = PackedScene.new()
 	var result = scene.pack(root)
 	return ResourceSaver.save(scene, path)
 
-func get_layer_node_path(layer, groups:bool = false) -> String:
+func get_layer_node_path(layer, groups: bool = false) -> String:
 	var group = layer.group
 	if groups and group:
 		return "./{group}/{name}".format({
@@ -128,10 +128,11 @@ func get_layer_node_path(layer, groups:bool = false) -> String:
 		"name": layer.name
 	})
 
-func add_layer(layer, root:Node, groups:bool = false) -> Node:
+func add_layer(layer, root: Node, groups: bool = false) -> Node:
 	var group = layer.group
 	var layer_node = Sprite2D.new()
 	layer_node.name = layer.name
+	layer_node.visible = layer.visible
 
 	if groups and group:
 		var group_node = root
