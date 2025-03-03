@@ -14,7 +14,7 @@ enum UpdateMode {
 
 ## How many of the top children should be considered for selection.
 @export var select_from_top: int = 1
-@export var continue_after_completion: bool = true
+@export var weight: float = 1.0
 
 ## The seed used for random selection. If the seed is -1, the seed is randomized.
 @warning_ignore("shadowed_global_identifier")
@@ -71,7 +71,7 @@ func select_next_state():
 		var utility = 0.0 # regular states are considered to have 0 utility
 		if child is UtilityState or child is UtilitySelectState:
 			if child.should_consider():
-				utility = child.get_utility()
+				utility = child.get_utility() * child.weight
 			else:
 				continue
 

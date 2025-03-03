@@ -13,7 +13,7 @@ func should_consider() -> bool:
 ## Override this function to add your own considerations
 ## See [method UtilityState.consider] for an example
 func get_utility() -> float:
-	return weight
+	return 0.0
 
 ## consider is a helper function to calculate the utility of this state.
 ## example:
