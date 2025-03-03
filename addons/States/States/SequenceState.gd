@@ -3,17 +3,18 @@ class_name SequenceState extends SelectState
 ## A sequence state is a state that can only have one child active at a time.
 ## Active children of sequence states should use the [signal State.transition_requested] signal to make the next child of this node the active state.
 
-func _on_child_transition(requesting_state:State):
+func _on_transition_requested(event: TransitionEvent) -> void:
 	if current_state == null:
 		# If there is no current state, the requesting state is the new current state
-		super._on_child_transition(requesting_state)
+		super._on_transition_requested(event)
 		return
 	
-	if current_state != requesting_state:
-		# If the requesting state is not the current state, ignore the request
+	# If the requesting state is not the current state, ignore the request
+	if current_state != event.current_state:
+		event.accept() # Stop the event from bubbling up
 		return
 	
-	var new_state:State = null
+	var new_state: State = null
 	var count = get_child_count()
 	var index = current_state.get_index() if current_state else -1
 	
@@ -30,4 +31,5 @@ func _on_child_transition(requesting_state:State):
 		if index == start_index:
 			break
 
-	super._on_child_transition(new_state)
+	event.current_state = new_state
+	super._on_transition_requested(event)

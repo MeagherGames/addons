@@ -6,12 +6,9 @@ class_name UtilityState extends State
 ## The weight of this state in the utility calculation, higher weights are more likely to be selected
 @export var weight:float = 1.0
 
-## The time this state was entered
-var enter_time:float = 0.0 
-
 ## Override this function to tell the [UtilitySelectState] if this state should be considered
 func should_consider() -> bool:
-	return false
+	return true
 
 ## Override this function to add your own considerations
 ## See [method UtilityState.consider] for an example
@@ -36,23 +33,19 @@ func consider(value:float, weight:float = 1.0) -> float:
 	var consideration = value + (1.0 - value) * value
 	return lerp(consideration, 1.0, 1.0 - weight)
 
+## Returns the current time in seconds.
+func get_time() -> float:
+	return Time.get_ticks_msec() / 1000.0
+
 ## Returns the normalized time since some time in seconds.
-func get_elapsed_time_seconds(time:float) -> float:
+func get_elapsed_time(time:float) -> float:
 	var now_seconds = Time.get_ticks_msec() / 1000.0
 	var delta = ( now_seconds - time)
 	return delta
 
-## Returns the normalized time since this state was entered.
-func get_elapsed_time_since_entered_seconds() -> float:
-	return get_elapsed_time_seconds(enter_time)
-
 ## Returns the normalized time since some time in seconds.
 func get_progress_towards_max_duration(time:float, max_seconds:float) -> float:
-	return get_elapsed_time_seconds(time) / max_seconds
-
-## Returns the normalized time since this state was entered.
-func get_progress_towards_max_duration_since_entered(max_seconds:float) -> float:
-	return get_progress_towards_max_duration(enter_time, max_seconds)
+	return get_elapsed_time(time) / max_seconds
 
 ## This normalizes a value between 0 and 1 nonlineraly
 ## Useful when very large or small values are not meaningful
@@ -70,8 +63,3 @@ func normalized(value:float, minimum:float, maximum:float) -> float:
 	):
 		return 0.0
 	return (value - minimum) / (maximum - minimum)
-
-func _notification(what):
-	if what == NOTIFICATION_READY or what == NOTIFICATION_UNPAUSED:
-		if is_active():
-			enter_time = Time.get_ticks_msec() / 1000.0
