@@ -133,4 +133,4 @@ func get_utility() -> float:
 		select_next_state()
 		if not current_state:
 			return 0.0
-	return current_state.get_utility()
+	return current_state.get_utility() * current_state.weight
