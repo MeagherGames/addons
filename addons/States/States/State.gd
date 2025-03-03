@@ -52,8 +52,8 @@ func request_transition(event: TransitionEvent = null) -> void:
 	else:
 		transition_requested.emit(event.current_state)
 	
-	event.current_state = self
 	if not event.is_accepted and get_parent() is State:
+		event.current_state = self
 		get_parent().request_transition(event)
 
 func _notification(what):
