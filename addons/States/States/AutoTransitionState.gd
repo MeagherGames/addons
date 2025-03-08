@@ -6,17 +6,17 @@ enum UpdateMode {
 	MANUAL
 }
 
-@export var context:Node = null
-@export_multiline var expression:String = "" :
+@export var context: Node = null
+@export_multiline var expression: String = "":
 	set(value):
 		expression = value
 		_update_expression()
-@export var update_mode:UpdateMode = UpdateMode.IDLE
+@export var update_mode: UpdateMode = UpdateMode.IDLE
 
-var _expression:Expression = Expression.new()
-var _expression_is_valid:bool = false
+var _expression: Expression = Expression.new()
+var _expression_is_valid: bool = false
 
-func _set_enabled(value:bool):
+func _set_enabled(value: bool):
 	if is_enabled == value:
 		return
 	
@@ -27,7 +27,7 @@ func _set_enabled(value:bool):
 			child.is_enabled = value
 
 func _get_extra_expression_keys() -> Array[String]:
-	var keys:Array[String] = []
+	var keys: Array[String] = []
 	for prop in ProjectSettings.get_property_list():
 		if prop.name.begins_with("autoload/"):
 			var name = prop.name.split("/")[1]
@@ -35,7 +35,7 @@ func _get_extra_expression_keys() -> Array[String]:
 	return keys
 
 func _get_extra_expression_values() -> Array[Variant]:
-	var values:Array[Variant] = []
+	var values: Array[Variant] = []
 	for prop in ProjectSettings.get_property_list():
 		if prop.name.begins_with("autoload/"):
 			var name = prop.name.split("/")[1]

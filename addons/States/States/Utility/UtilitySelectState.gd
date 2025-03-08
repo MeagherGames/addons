@@ -6,81 +6,47 @@ class_name UtilitySelectState extends SelectState
 
 const EPSILON = 0.01
 
-enum UpdateMode {
-	PROCESS,
-	PHYSICS,
-	MANUAL
-}
-
-## How many of the top children should be considered for selection.
-@export var select_from_top: int = 1
+## The weight of this state in the utility calculation, higher weights are more likely to be selected
 @export var weight: float = 1.0
-
-## The seed used for random selection. If the seed is -1, the seed is randomized.
-@warning_ignore("shadowed_global_identifier")
-@export_range(-1, 0, 1, "or_greater") var seed: int = -1:
-	set(value):
-		if value != seed:
-			seed = value
-			if seed >= 0:
-				rng.seed = seed
+## How many of the top children should be considered for selection.
+@export_range(1, 1, 1, "or_greater") var select_from_top: int = 1
 
 ## The bias towards children with lower index. A value of 0 means no bias, a value of 1 means maximum bias.
 @export_range(0, 1, 0.01) var children_order_bias: float = 1.0
-@export var update_mode: UpdateMode = UpdateMode.PROCESS:
-	set(value):
-		if value == UpdateMode.PROCESS:
-			set_process(true)
-			set_physics_process(false)
-		elif value == UpdateMode.PHYSICS:
-			set_process(false)
-			set_physics_process(true)
-		else:
-			set_process(false)
-			set_physics_process(false)
-
-var rng: RandomNumberGenerator = RandomNumberGenerator.new()
-var queue: PriorityQueue = PriorityQueue.new(true) # max heap
 
 @warning_ignore("unused_parameter")
 func _on_transition_requested(event: TransitionEvent):
 	if (
-		event.current_state is UtilityState or
-		event.current_state is UtilitySelectState
+		event.active_state is UtilityState or
+		event.active_state is UtilitySelectState
 	):
-		event.accept()
-		select_next_state()
-		
-		var parent = get_parent()
-		if parent is UtilitySelectState or parent is UtilityState:
-			request_transition()
+		# Since UtilitySelectStates can be nested
+		# We let the event bubble still (no event.accept())
+		_select_best_state()
 	else:
 		super._on_transition_requested(event)
 
-func select_next_state():
+func _select_best_state():
 	if get_child_count() == 0:
 		return
-	queue.clear()
-
-	var transition_event = TransitionEvent.new(self)
+	
+	var queue: PriorityQueue = PriorityQueue.new(true) # max heap
+	
+	if active_state:
+		active_state.is_enabled = false
 	
 	for child in get_children():
-		if not child is State:
+		if not (
+			(child is UtilityState or child is UtilitySelectState) and
+			child.should_consider()
+		):
 			continue
 
-		var utility = 0.0 # regular states are considered to have 0 utility
-		if child is UtilityState or child is UtilitySelectState:
-			if child.should_consider():
-				utility = child.get_utility() * child.weight
-			else:
-				continue
-
+		var utility = child.get_utility() * child.weight
 		if not is_finite(utility):
 			# if the utility is Infinity we can immediately select the child
-			transition_event.current_state = child
-			super._on_transition_requested(transition_event)
+			_select_new_state(child)
 			return
-
 
 		# bias towards children with lower index
 		if children_order_bias > 0.0:
@@ -90,47 +56,42 @@ func select_next_state():
 		queue.push(utility, child)
 	
 	if queue.is_empty():
+		_select_new_state(null)
 		return
 	
 	var select_count = min(select_from_top, queue.size())
 	if select_count == 1:
-		transition_event.current_state = queue.pop()
-		super._on_transition_requested(transition_event)
+		_select_new_state(queue.pop())
 		return
 
 	var top: Array = []
+	var weights: Array[float]
+	var total_weight: float = 0.0
 	for i in select_count:
+		var w = queue.peek_priority()
+		total_weight += w
+		weights.append(w)
 		top.append(queue.pop())
-
-	if not top.is_empty():
-		if seed == -1:
-			rng.seed = randi()
-		var best_child = rng.randi_range(0, top.size() - 1)
-		transition_event.current_state = top[best_child]
-		super._on_transition_requested(transition_event)
-
-func _notification(what):
-	if what == NOTIFICATION_READY:
-		if not current_state:
-			select_next_state()
-		
-	if (
-		(what == NOTIFICATION_PROCESS and update_mode == UpdateMode.PROCESS) or
-		(what == NOTIFICATION_PHYSICS_PROCESS and update_mode == UpdateMode.PHYSICS)
-	):
-		if not current_state:
-			select_next_state()
+	
+	var random_value = randf() * total_weight
+	var best_child = 0
+	for i in select_count:
+		random_value -= weights[i]
+		if random_value <= 0.0:
+			best_child = i
+			break
+	_select_new_state(top[best_child])
 
 func should_consider() -> bool:
-	if not current_state:
-		select_next_state()
-		if not current_state:
-			return false
-	return current_state.should_consider()
+	if not active_state or not active_state.should_consider():
+		_select_best_state()
+	if not active_state:
+		return false
+	return active_state.should_consider()
 
 func get_utility() -> float:
-	if not current_state:
-		select_next_state()
-		if not current_state:
-			return 0.0
-	return current_state.get_utility() * current_state.weight
+	if not active_state:
+		_select_best_state()
+	if not active_state:
+		return 0.0
+	return active_state.get_utility() * active_state.weight

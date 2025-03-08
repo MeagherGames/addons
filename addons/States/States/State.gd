@@ -9,17 +9,17 @@ class_name State extends Node
 
 
 class TransitionEvent extends RefCounted:
-	var original_state: State
-	var current_state: State
+	var initiating_state: State
+	var active_state: State
 	var is_accepted: bool = false
 
-	func _init(original_state: State = null):
-		self.original_state = original_state
-		self.current_state = original_state
+	@warning_ignore("shadowed_variable")
+	func _init(initiating_state: State = null):
+		self.initiating_state = initiating_state
+		self.active_state = initiating_state
 
 	func accept():
 		is_accepted = true
-
 
 ## Emitted when the state is entered.
 signal enabled()
@@ -30,40 +30,43 @@ signal transition_requested(event: TransitionEvent)
 
 @export var is_enabled: bool = true: set = _set_enabled
 
-var _is_transitioning: bool = false
+var _process_mode_update_queued:bool = false
 
-func _set_enabled(value: bool):
-	if value:
-		process_mode = PROCESS_MODE_INHERIT
-		if is_active(): enabled.emit()
-	else:
-		process_mode = PROCESS_MODE_DISABLED
-		disabled.emit()
+func _set_enabled(value):
+	if is_enabled == value:
+		return
 	is_enabled = value
+	if not is_enabled:
+		process_mode = PROCESS_MODE_DISABLED
+	if not _process_mode_update_queued:
+		_process_mode_update_queued = true
+		_update_process_mode()
+
+func _update_process_mode():
+	await get_tree().process_frame
+	process_mode = PROCESS_MODE_INHERIT if is_enabled else PROCESS_MODE_DISABLED
+	_process_mode_update_queued = false
 
 func is_active() -> bool:
-	return is_enabled and process_mode != PROCESS_MODE_DISABLED
+	return is_enabled and can_process()
 
-## Call this function to request a transition, the logic depends on the parent state that accepts the transition.
-## Bubbles up and expects a [State] parent to handle the transition by calling [accept_transition].
-func request_transition(event: TransitionEvent = null) -> void:
-	if not event:
-		event = TransitionEvent.new(self)
-	else:
-		transition_requested.emit(event.current_state)
-	
+## Call this function to request a transition, what that means depends on the parent state.
+## This bubbles up until it reaches a state that accepts the transition.
+func request_transition() -> void:
+	if get_parent() is State:
+		var event = TransitionEvent.new(self)
+		get_parent()._request_transition(event)
+
+func _request_transition(event: TransitionEvent):
+	transition_requested.emit(event)
 	if not event.is_accepted and get_parent() is State:
-		event.current_state = self
-		get_parent().request_transition(event)
+		event.active_state = self
+		get_parent()._request_transition(event)
 
 func _notification(what):
-	if what == NOTIFICATION_ENTER_TREE:
-		_set_enabled(is_enabled)
-	
-	if what == NOTIFICATION_UNPAUSED:
-		if is_active():
-			enabled.emit()
-	
-	if what == NOTIFICATION_EXIT_TREE or what == NOTIFICATION_PAUSED:
-		if not is_active():
-			disabled.emit()
+	if (what == NOTIFICATION_ENTER_TREE or what == NOTIFICATION_UNPAUSED) and is_active():
+		#prints("ENABLED", get_path(), name)
+		enabled.emit()
+	if (what == NOTIFICATION_PAUSED or what == NOTIFICATION_EXIT_TREE):
+		#prints("DISABLED", get_path(), name)
+		disabled.emit()
