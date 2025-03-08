@@ -36,11 +36,12 @@ func _set_enabled(value):
 	if is_enabled == value:
 		return
 	is_enabled = value
-	if not is_enabled:
-		process_mode = PROCESS_MODE_DISABLED
-	if not _process_mode_update_queued:
-		_process_mode_update_queued = true
-		_update_process_mode()
+	if is_inside_tree():
+		if not is_enabled:
+			process_mode = PROCESS_MODE_DISABLED
+		if not _process_mode_update_queued:
+			_process_mode_update_queued = true
+			_update_process_mode()
 
 func _update_process_mode():
 	await get_tree().process_frame

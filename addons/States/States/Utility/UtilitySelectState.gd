@@ -82,6 +82,7 @@ func _select_best_state():
 			break
 	_select_new_state(top[best_child])
 
+## Returns true if the active state should be considered for selection.
 func should_consider() -> bool:
 	if not active_state or not active_state.should_consider():
 		_select_best_state()
@@ -89,9 +90,6 @@ func should_consider() -> bool:
 		return false
 	return active_state.should_consider()
 
+## Returns 1.0 as the utility of this state.
 func get_utility() -> float:
-	if not active_state:
-		_select_best_state()
-	if not active_state:
-		return 0.0
-	return active_state.get_utility() * active_state.weight
+	return 1.0

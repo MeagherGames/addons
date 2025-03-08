@@ -8,7 +8,6 @@ func _ready() -> void:
     enabled.connect(_enabled) # When the state is entered or made active.
     disabled.connect(_disabled) # When the state is exited or made inactive.
 
-
 func _enabled():
     pass
 
