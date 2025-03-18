@@ -14,21 +14,37 @@ const EPSILON = 0.01
 ## The bias towards children with lower index. A value of 0 means no bias, a value of 1 means maximum bias.
 @export_range(0, 1, 0.01) var children_order_bias: float = 1.0
 
+var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var _select_best_state_queued: bool = false
+
 @warning_ignore("unused_parameter")
 func _on_transition_requested(event: TransitionEvent):
 	if (
 		event.active_state is UtilityState or
 		event.active_state is UtilitySelectState
 	):
-		# Since UtilitySelectStates can be nested
-		# We let the event bubble still (no event.accept())
-		_select_best_state()
+		var parent = get_parent()
+		if not (parent is UtilityState or parent is UtilitySelectState):
+			# We are the top level UtilitySelectState
+			# We should accept the transition
+			event.accept()
+		_queue_select_best_state()
 	else:
 		super._on_transition_requested(event)
+
+func _queue_select_best_state():
+	if _select_best_state_queued:
+		return
+	_select_best_state_queued = true
+	await _select_best_state()
+	_select_best_state_queued = false
 
 func _select_best_state():
 	if get_child_count() == 0:
 		return
+
+	if not Engine.is_in_physics_frame():
+		await get_tree().physics_frame
 	
 	var queue: PriorityQueue = PriorityQueue.new(true) # max heap
 	
@@ -38,11 +54,11 @@ func _select_best_state():
 	for child in get_children():
 		if not (
 			(child is UtilityState or child is UtilitySelectState) and
-			child.should_consider()
+			await child.should_consider()
 		):
 			continue
 
-		var utility = child.get_utility() * child.weight
+		var utility = (await child.get_utility()) * child.weight
 		if not is_finite(utility):
 			# if the utility is Infinity we can immediately select the child
 			_select_new_state(child)
@@ -73,7 +89,7 @@ func _select_best_state():
 		weights.append(w)
 		top.append(queue.pop())
 	
-	var random_value = randf() * total_weight
+	var random_value = rng.randf() * total_weight
 	var best_child = 0
 	for i in select_count:
 		random_value -= weights[i]
@@ -84,12 +100,19 @@ func _select_best_state():
 
 ## Returns true if the active state should be considered for selection.
 func should_consider() -> bool:
-	if not active_state or not active_state.should_consider():
-		_select_best_state()
+	var should_consider_current_active_state: bool = false
+	if active_state:
+		should_consider_current_active_state = await active_state.should_consider()
+	if not should_consider_current_active_state:
+		await _queue_select_best_state()
 	if not active_state:
 		return false
-	return active_state.should_consider()
+	return await active_state.should_consider()
 
 ## Returns 1.0 as the utility of this state.
 func get_utility() -> float:
 	return 1.0
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_ENTER_TREE:
+		rng.seed = randi()

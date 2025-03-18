@@ -30,7 +30,7 @@ signal transition_requested(event: TransitionEvent)
 
 @export var is_enabled: bool = true: set = _set_enabled
 
-var _process_mode_update_queued:bool = false
+var _process_mode_update_queued: bool = false
 
 func _set_enabled(value):
 	if is_enabled == value:
@@ -63,11 +63,14 @@ func _request_transition(event: TransitionEvent):
 	if not event.is_accepted and get_parent() is State:
 		event.active_state = self
 		get_parent()._request_transition(event)
+	elif not event.is_accepted:
+		# No parent to accept the transition, push a warning
+		push_warning("Unhandled transition request starting from \"%s\"" % event.initiating_state.get_path())
 
 func _notification(what):
 	if (what == NOTIFICATION_ENTER_TREE or what == NOTIFICATION_UNPAUSED) and is_active():
-		#prints("ENABLED", get_path(), name)
+		#prints("ENABLED", get_path())
 		enabled.emit()
 	if (what == NOTIFICATION_PAUSED or what == NOTIFICATION_EXIT_TREE):
-		#prints("DISABLED", get_path(), name)
+		#prints("DISABLED", get_path())
 		disabled.emit()

@@ -4,7 +4,7 @@ class_name UtilityGroupState extends UtilityState
 
 func should_consider() -> bool:
 	for child in get_children():
-		if (child is UtilityState or child is UtilitySelectState) and not child.should_consider():
+		if (child is UtilityState or child is UtilitySelectState) and not await child.should_consider():
 			return false
 	return true
 
@@ -18,6 +18,6 @@ func get_utility() -> float:
 	for child in get_children():
 		if child is UtilityState or child is UtilitySelectState:
 			var child_factor: float = child.weight / total_child_weight
-			utility *= consider(child.get_utility(), child.weight * child_factor)
+			utility *= consider(await child.get_utility(), child.weight * child_factor)
 			
 	return utility
