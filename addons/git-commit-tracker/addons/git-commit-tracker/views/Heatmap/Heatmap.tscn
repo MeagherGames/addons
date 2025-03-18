@@ -1,0 +1,59 @@
+[gd_scene load_steps=4 format=3 uid="uid://dm1av867oe3b6"]
+
+[ext_resource type="Script" path="res://addons/git-commit-tracker/views/Heatmap/Heatmap.gd" id="1_nflf8"]
+[ext_resource type="Script" path="res://addons/git-commit-tracker/views/Heatmap/Calendar.gd" id="2_j7dek"]
+[ext_resource type="Script" path="res://addons/git-commit-tracker/views/Heatmap/WeekHeatmap.gd" id="2_yj2lw"]
+
+[node name="Heatmap" type="MarginContainer"]
+anchors_preset = 10
+anchor_right = 1.0
+grow_horizontal = 2
+script = ExtResource("1_nflf8")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="Calendar" type="RichTextLabel" parent="VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 192)
+layout_mode = 2
+bbcode_enabled = true
+text = "..."
+fit_content = true
+scroll_following = true
+autowrap_mode = 0
+horizontal_alignment = 1
+vertical_alignment = 1
+script = ExtResource("2_j7dek")
+
+[node name="WeekHeatmap" type="HBoxContainer" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+script = ExtResource("2_yj2lw")
+
+[node name="Days" type="RichTextLabel" parent="VBoxContainer/WeekHeatmap"]
+layout_mode = 2
+size_flags_horizontal = 3
+bbcode_enabled = true
+text = "..."
+fit_content = true
+scroll_active = false
+autowrap_mode = 0
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CalendarButton" type="Button" parent="VBoxContainer/WeekHeatmap"]
+layout_mode = 2
+toggle_mode = true
+text = "📅"
+flat = true
+
+[node name="RefreshButton" type="Button" parent="VBoxContainer/WeekHeatmap"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "⟳"
+flat = true
+
+[connection signal="toggled" from="VBoxContainer/WeekHeatmap/CalendarButton" to="." method="_on_calendar_button_toggled"]
+[connection signal="pressed" from="VBoxContainer/WeekHeatmap/RefreshButton" to="." method="_on_refresh_button_pressed"]
