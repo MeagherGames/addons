@@ -96,10 +96,14 @@ func _fill_week(week: int, year: int):
 func _process_commits(commits: Array[Dictionary]):
 	week_data.clear()
 	
+	var last_week = -1
 	for commit in commits:
 		var week = _get_week_of_year(commit.date)
-		if not week_data.has(week):
-			_fill_week(week, commit.date.year)
+		if last_week == -1:
+			last_week = week
+		for i in range(last_week, week + 1):
+			_fill_week(i, commit.date.year)
+		last_week = week
 
 		var weekday = commit.date.weekday
 		var activity = week_data[week][weekday]
