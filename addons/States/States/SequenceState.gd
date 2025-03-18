@@ -4,14 +4,11 @@ class_name SequenceState extends SelectState
 ## Active children of sequence states should use the [signal State.transition_requested] signal to make the next child of this node the active state.
 
 func _on_transition_requested(event: TransitionEvent) -> void:
-	if active_state == null:
-		# If there is no current state, the requesting state is the new current state
+	if active_state == null or active_state != event.active_state:
+		# This allows things to go out of sequence
+		# But if the nodes themselves are calling their request_transition
+		# Everything should go in sequence
 		super._on_transition_requested(event)
-		return
-	
-	# If the requesting state is not the current state, ignore the request
-	if active_state != event.active_state:
-		event.accept() # Stop the event from bubbling up
 		return
 	
 	var new_state: State = null
@@ -30,6 +27,6 @@ func _on_transition_requested(event: TransitionEvent) -> void:
 			break
 		if index == start_index:
 			break
-
+	
 	event.active_state = new_state
 	super._on_transition_requested(event)
