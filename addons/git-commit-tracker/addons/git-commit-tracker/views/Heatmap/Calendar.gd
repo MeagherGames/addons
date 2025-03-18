@@ -34,14 +34,21 @@ func _get_start_day_of_year(year: int) -> int:
 	var h = (q + int((13 * (m + 1)) / 5) + K + int(K / 4) + int(J / 4) - 2 * J) % 7
 	return ((h + 5) % 7) + 1 # Adjust to make Sunday = 0, Monday = 1, ..., Saturday = 6
 
-func _get_week_of_year(datetime: Dictionary) -> int:
+func _get_week_of_year(datetime: Dictionary) -> Dictionary[String, int]:
 	var DAYS_IN_MONTHS = _get_days_in_months(datetime.year)
 	var start_day_of_year = _get_start_day_of_year(datetime.year)
 	var day_of_year = datetime.day
 	for i in range(datetime.month - 1):
 		day_of_year += DAYS_IN_MONTHS[i]
 	var week_of_year = ceil((day_of_year + start_day_of_year) / 7.0)
-	return week_of_year
+	var year = datetime.year
+	if week_of_year > 52:
+		week_of_year = 1
+		year += 1
+	return {
+		"week": week_of_year,
+		"year": year
+	}
 
 func _get_date_from_week_weekday(week: int, weekday: int, year: int) -> Dictionary:
 	var DAYS_IN_MONTHS = _get_days_in_months(year)
@@ -70,43 +77,62 @@ func _get_date_from_week_weekday(week: int, weekday: int, year: int) -> Dictiona
 	while day_of_year >= DAYS_IN_MONTHS[month]:
 		day_of_year -= DAYS_IN_MONTHS[month]
 		month += 1
-
+	
 	return {"year": year, "month": month + 1, "day": day_of_year + 1}
 
 func set_commits(commits: Array[Dictionary]):
 	_process_commits(commits)
 	_update_calendar()
+	pass
 
-func _fill_week(week: int, year: int):
-	if not week_data.has(week):
-		week_data[week] = []
-		for i in range(7):
-			var datetime = _get_date_from_week_weekday(week, i, year)
-			week_data[week].append({
-				"week": week,
-				"weekday": i,
-				"day": datetime.day,
-				"month": datetime.month,
-				"timestamp": Time.get_unix_time_from_datetime_string("%d-%d-%d" % [datetime.year, datetime.month, datetime.day]),
-				"commits": 0,
-				"is_streak": false,
-				"messages": []
-			})
+func _fill_week(datetime: Dictionary):
+	var key = _get_week_of_year(datetime)
+	if week_data.has(key):
+		return
+	week_data[key] = []
+
+	for i in range(7):
+		var day_datetime = _get_date_from_week_weekday(key.week, i, key.year)
+		week_data[key].append({
+			"week": key.week,
+			"weekday": i,
+			"day": day_datetime.day,
+			"month": day_datetime.month,
+			"year": day_datetime.year,
+			"timestamp": Time.get_unix_time_from_datetime_string("{year}-{month}-{day}".format(day_datetime)),
+			"commits": 0,
+			"is_streak": false,
+			"messages": []
+		})
 
 func _process_commits(commits: Array[Dictionary]):
 	week_data.clear()
 	
-	var last_week = -1
+	var last_commit_date = null
+	var last_commit_key = null
 	for commit in commits:
-		var week = _get_week_of_year(commit.date)
-		if last_week == -1:
-			last_week = week
-		for i in range(last_week, week + 1):
-			_fill_week(i, commit.date.year)
-		last_week = week
+		var key = _get_week_of_year(commit.date)
+		if last_commit_date == null or last_commit_key == null:
+			last_commit_date = commit.date.duplicate()
+			last_commit_date.day = 1
+			last_commit_key = _get_week_of_year(last_commit_date)
+			_fill_week(last_commit_date)
 
+		var count = 0
+		while (last_commit_key.week < key.week or last_commit_key.year < key.year) and count < 5:
+			count += 1
+			# somehow we need to move a week forward from the last commit date
+			last_commit_date = _get_date_from_week_weekday(last_commit_key.week + 1, 0, last_commit_key.year)
+			last_commit_key = _get_week_of_year(last_commit_date)
+			_fill_week(last_commit_date)
+		
+		
+		_fill_week(commit.date)
+		last_commit_key = key
+		last_commit_date = commit.date
+		
 		var weekday = commit.date.weekday
-		var activity = week_data[week][weekday]
+		var activity = week_data[key][weekday]
 		activity.commits += 1
 		activity.messages.append(
 			"[%s] %s: %s" % [
@@ -146,7 +172,12 @@ func _update_calendar():
 				part = "[hint=\"%s\"]%s[/hint]" % ["\n".join(day.messages), part]
 
 			if day.day == 1:
-				lines[month_index] = "[cell]%s[/cell]" % MONTHS[day.month - 1]
+				var data = MONTHS[day.month - 1]
+				if day.month == 1:
+					# this is the first month of the year
+					data = "[u]%s[/u]" % data
+					
+				lines[month_index] = "[cell]%s[/cell]" % data
 			if day.timestamp == current_time:
 				part = "[pulse]%s[/pulse]" % part
 			if day.timestamp > current_time:
