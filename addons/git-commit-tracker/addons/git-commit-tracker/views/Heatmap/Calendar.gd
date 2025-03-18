@@ -194,12 +194,16 @@ func _update_calendar():
 				for streak_data in streak:
 					var streak_part = streak_data[0]
 					var streak_index = streak_data[1]
+					var is_first_of_month = streak_data[2]
 					if is_valid_streak:
 						streak_start = min(streak_start, streak_index)
 						streak_end = max(streak_end, streak_index)
 						# replace the emoji with a streak emoji
 						streak_part = streak_part.replace(EMOJIS[true], "[color=orange]🔥[/color]")
-					lines[streak_index] = "[cell bg=#0000,#6661]%s[/cell]" % streak_part
+					if is_first_of_month:
+						lines[streak_index] = "[cell bg=#8883]%s[/cell]" % streak_part
+					else:
+						lines[streak_index] = "[cell bg=#0000,#6661]%s[/cell]" % streak_part
 				streak.clear()
 				if day.day == 1:
 					lines.append("[cell bg=#8883]%s[/cell]" % part)
