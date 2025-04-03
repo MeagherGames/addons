@@ -1,6 +1,8 @@
 # Addons
 MeagherGames addons for Godot Engine
 Pushing changes to the main branch will automatically create a new release.
+> 📌 **Note:** This repository is maintained as a personal project. There is no obligation or guarantee of support, maintenance, or feature development for external users.
+
 
 ## Pre-requisites
 - [Node.js](https://nodejs.org/en/download/)
