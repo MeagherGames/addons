@@ -1,7 +1,9 @@
 @tool
 extends RefCounted
 
+const ASEPRITE_PATH_KEY = "filesystem/import/aseprite/path"
 const AsepriteFile = preload("res://addons/aseprite-importer/Aseprite/AsepriteFile.gd")
+
 
 static func get_global_filepath(filepath) -> String:
 	return ProjectSettings.globalize_path(filepath)
@@ -29,54 +31,65 @@ static func test_aseprite_path(file_path: String) -> bool:
 		return false
 	return true
 
+static func set_aseprite_path(path: String) -> void:
+	var editor_settings = EditorInterface.get_editor_settings()
+	editor_settings.set(ASEPRITE_PATH_KEY, path)
+	editor_settings.add_property_info({
+		name = ASEPRITE_PATH_KEY,
+		type = TYPE_STRING,
+		hint = PROPERTY_HINT_GLOBAL_FILE
+	})
+	editor_settings.set_initial_value(ASEPRITE_PATH_KEY, "", false)
+	prints("Set aseprite path to:", path)
+
 static func find_aseprite() -> String:
 	var editor_settings = EditorInterface.get_editor_settings()
 
-	if "filesystem/import/aseprite/path" in editor_settings:
-		var aseprite_path = editor_settings.get("filesystem/import/aseprite/path")
+	if editor_settings.has_setting(ASEPRITE_PATH_KEY):
+		var aseprite_path = editor_settings.get(ASEPRITE_PATH_KEY)
 		if test_aseprite_path(aseprite_path):
 			return aseprite_path
 
-	var locations: PackedStringArray = []
+	var paths: PackedStringArray = []
 	match OS.get_name():
 		"Windows":
 			var output = []
 			OS.execute("cmd", ["/c", "ftype", "AsepriteFile"], output, true)
 			for ftype in output:
 				var exe_path = ftype.split("=", false, 1)[1]
-				locations.append(exe_path)
+				paths.append(exe_path)
 
-			locations.append("C:/Program Files (x86)/Steam/steamapps/common/Aseprite/Aseprite.exe")
-			locations.append("C:/Program Files (x86)/Aseprite/Aseprite.exe")
-			locations.append("C:/Program Files/Aseprite/Aseprite.exe")
+			paths.append("C:/Program Files (x86)/Steam/steamapps/common/Aseprite/Aseprite.exe")
+			paths.append("C:/Program Files (x86)/Aseprite/Aseprite.exe")
+			paths.append("C:/Program Files/Aseprite/Aseprite.exe")
 
-		"iOS":
-			locations.append("~/Library/ApplicationSupport/Steam/steamapps/common/Aseprite/Aseprite.app/Contents/MacOS/aseprite")
-			locations.append("~/Library/Application Support/Steam/SteamApps/common/Aseprite/Aseprite.app/Contents/MacOS/aseprite")
-			locations.append("/Applications/Aseprite.app/Contents/MacOS/aseprite")
+		"iOS", "macOS":
+			paths.append("~/Library/ApplicationSupport/Steam/steamapps/common/Aseprite/Aseprite.app/Contents/MacOS/aseprite")
+			paths.append("~/Library/Application Support/Steam/SteamApps/common/Aseprite/Aseprite.app/Contents/MacOS/aseprite")
+			paths.append("/Applications/Aseprite.app/Contents/MacOS/aseprite")
 
-		"macOS":
-			locations.append("~/Library/ApplicationSupport/Steam/steamapps/common/Aseprite/Aseprite.app/Contents/MacOS/aseprite")
-			locations.append("~/Library/Application Support/Steam/SteamApps/common/Aseprite/Aseprite.app/Contents/MacOS/aseprite")
-			locations.append("/Applications/Aseprite.app/Contents/MacOS/aseprite")
+		"Linux", "FreeBSD", "NetBSD", "OpenBSD", "BSD":
+			# I haven't tested this
+			var output = []
+			OS.execute("find", [
+				"~/.steam/steam/steamapps/common",
+				"~/.local/bin",
+				"/usr/local/bin",
+				"/opt",
+				"-name",
+				"aseprite*"
+			], output, true)
+			for path in output:
+				paths.append(path)
+	
+	
+	for path in paths:
+		if FileAccess.file_exists(path) and test_aseprite_path(path):
+			set_aseprite_path(path)
+			return path
 
-	for location in locations:
-		if FileAccess.file_exists(location) and test_aseprite_path(location):
-			editor_settings.set("filesystem/import/aseprite/path", location)
-			editor_settings.add_property_info({
-				name = "filesystem/import/aseprite/path",
-				type = TYPE_STRING,
-				hint = PROPERTY_HINT_GLOBAL_FILE
-			})
-			return location
-
-	push_warning("Aseprite not found. Please set the path to Aseprite in the Editor Settings. (Project -> Project Settings -> Filesystem -> Import -> Aseprite -> Path)")
-	editor_settings.set("filesystem/import/aseprite/path", "")
-	editor_settings.add_property_info({
-		name = "filesystem/import/aseprite/path",
-		type = TYPE_STRING,
-		hint = PROPERTY_HINT_GLOBAL_FILE
-	})
+	push_warning("Aseprite not found. Please set the path to Aseprite in the Editor Settings. (Editor > Editor Settings -> Filesystem -> Import -> Aseprite -> Path)")
+	set_aseprite_path("")
 	return ""
 
 static func execute(command: String, arguments: Array = [], print_output = false) -> int:

@@ -7,10 +7,10 @@ extends AnimationPlayer
 ## If animations are removed from the source AnimationPlayer, they will not be removed from this AnimationPlayer unless you force sync.
 ## Any changes you make to these animations will not be removed unless you force sync.
 
-@export_tool_button("Sync Animations", "Reload") var sync_animations:Callable :
-	get: return Callable(sync)
+@export_tool_button("Sync Animations", "Reload") var sync_animations: Callable:
+	get: return Callable(sync )
 @export_node_path("AnimationPlayer") var source_animation_player: NodePath
-@export_tool_button("Force Reset Animations", "NodeWarning") var force_reset:Callable :
+@export_tool_button("Force Reset Animations", "NodeWarning") var force_reset: Callable:
 	get: return Callable(_reset_button_pressed)
 
 func _ready() -> void:
@@ -26,13 +26,13 @@ func _ready() -> void:
 func _on_animation_list_changed() -> void:
 	if not Engine.is_editor_hint():
 		return
-	sync()
+	sync ()
 
 func _reset_button_pressed() -> void:
 	if not Engine.is_editor_hint():
 		return
-	var are_you_sure :AcceptDialog = AcceptDialog.new()
-	are_you_sure.dialog_text = "Are you sure you want to force sync? This will overwrite any animations that share the same name from the source AnimationPlayer."
+	var are_you_sure: AcceptDialog = AcceptDialog.new()
+	are_you_sure.dialog_text = "Are you sure you want to force sync? This will delete all the animations currently in this AnimationPlayer."
 	are_you_sure.title = "Force Animation Sync"
 	are_you_sure.ok_button_text = "Force Sync"
 	are_you_sure.dialog_autowrap = true
@@ -41,14 +41,14 @@ func _reset_button_pressed() -> void:
 	are_you_sure.close_requested.connect(are_you_sure.queue_free)
 	EditorInterface.popup_dialog_centered(are_you_sure, Vector2(300, 100))
 
-func sync(force:bool=false) -> void:
+func sync(force: bool = false) -> void:
 	if not Engine.is_editor_hint():
 		return
 
 	var animation_player = get_node(source_animation_player)
 	var animation_list = animation_player.get_animation_list()
 	
-	var animation_library:AnimationLibrary
+	var animation_library: AnimationLibrary
 	if force:
 		remove_animation_library("")
 
@@ -60,7 +60,7 @@ func sync(force:bool=false) -> void:
 
 	for animation_name in animation_list:
 		var source_animation = animation_player.get_animation(animation_name)
-		var animation:Animation
+		var animation: Animation
 		if has_animation(animation_name):
 			animation = get_animation(animation_name)
 		
