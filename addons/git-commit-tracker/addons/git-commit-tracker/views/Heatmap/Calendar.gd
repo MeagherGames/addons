@@ -105,30 +105,31 @@ func _fill_week(datetime: Dictionary):
 			"messages": []
 		})
 
+func _fill_from_to(start: Dictionary, end: Dictionary):
+	var start_key = _get_week_of_year(start)
+	var end_key = _get_week_of_year(end)
+	var current_key = start_key
+	_fill_week(start)
+	while current_key.week < end_key.week or current_key.year < end_key.year:
+		var next_date = _get_date_from_week_weekday(current_key.week + 1, 0, current_key.year)
+		_fill_week(next_date)
+		current_key = _get_week_of_year(next_date)
+	_fill_week(end)
+		
+
 func _process_commits(commits: Array[Dictionary]):
 	week_data.clear()
 	
 	var last_commit_date = null
-	var last_commit_key = null
 	for commit in commits:
 		var key = _get_week_of_year(commit.date)
-		if last_commit_date == null or last_commit_key == null:
+		if last_commit_date == null:
 			last_commit_date = commit.date.duplicate()
 			last_commit_date.day = 1
-			last_commit_key = _get_week_of_year(last_commit_date)
 			_fill_week(last_commit_date)
 
-		var count = 0
-		while (last_commit_key.week < key.week or last_commit_key.year < key.year) and count < 5:
-			count += 1
-			# somehow we need to move a week forward from the last commit date
-			last_commit_date = _get_date_from_week_weekday(last_commit_key.week + 1, 0, last_commit_key.year)
-			last_commit_key = _get_week_of_year(last_commit_date)
-			_fill_week(last_commit_date)
+		_fill_from_to(last_commit_date, commit.date)
 		
-		
-		_fill_week(commit.date)
-		last_commit_key = key
 		last_commit_date = commit.date
 		
 		var weekday = commit.date.weekday
@@ -143,6 +144,11 @@ func _process_commits(commits: Array[Dictionary]):
 		)
 		if commit.is_streak:
 			activity.is_streak = true
+	
+	if last_commit_date:
+		_fill_from_to(last_commit_date, Time.get_date_dict_from_system())
+	else:
+		_fill_week(Time.get_date_dict_from_system())
 
 func _update_calendar():
 	var lines = []
