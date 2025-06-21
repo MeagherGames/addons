@@ -13,6 +13,9 @@ func _child_entered_tree(child):
 		child.is_enabled = active_state == child
 
 func _on_transition_requested(event: TransitionEvent):
+	if not event.active_state.get_parent() == self:
+		push_error("Transition requested from a state that is not a child of this SelectState: ", event.active_state.get_path(), " in ", get_path())
+		return
 	event.accept()
 	_select_new_state(event.active_state)
 
@@ -48,3 +51,5 @@ func _notification(what):
 	elif what == NOTIFICATION_EXIT_TREE:
 		child_entered_tree.disconnect(_child_entered_tree)
 		transition_requested.disconnect(_on_transition_requested)
+	elif what == NOTIFICATION_READY and not active_state:
+		push_warning(get_path(), " Has no active state selected")

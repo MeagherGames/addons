@@ -7,14 +7,13 @@ class_name State extends Node
 ## And it will automatically call exit() when it is removed from the scene tree.
 ## See [ConcurrentState] and [SelectState] for states that control when other states are active.
 
-
 class TransitionEvent extends RefCounted:
 	var initiating_state: State
 	var active_state: State
 	var is_accepted: bool = false
 
 	@warning_ignore("shadowed_variable")
-	func _init(initiating_state: State = null):
+	func _init(initiating_state: State):
 		self.initiating_state = initiating_state
 		self.active_state = initiating_state
 
