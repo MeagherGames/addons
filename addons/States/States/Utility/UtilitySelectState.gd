@@ -50,21 +50,29 @@ func _select_best_state():
 	
 	if active_state:
 		active_state.is_enabled = false
-	
-	for child in get_children():
-		if not (
-			(child is UtilityState or child is UtilitySelectState) and
-			await child.should_consider()
-		):
-			continue
 
-		var utility = (await child.get_utility()) * child.weight
+	# Calculate relative weights for utility normalization
+	var total_child_weight: float = 0.0
+	var children_to_consider: Array = []
+	for child in get_children():
+		if not (child is UtilityState or child is UtilitySelectState) or not child.should_consider():
+			continue
+		total_child_weight += child.weight
+		children_to_consider.append(child)
+	
+	# Build priority queue of states with calculated utilities
+	for child in children_to_consider:
+		var child_factor = 1.0
+		if total_child_weight > 0.0:
+			child_factor = child.weight / total_child_weight
+
+		var utility = await child.get_utility() * child_factor
 		if not is_finite(utility):
-			# if the utility is Infinity we can immediately select the child
+			# Infinite utility means immediate selection (emergency states)
 			_select_new_state(child)
 			return
 
-		# bias towards children with lower index
+		# Apply index bias to favor earlier children when utilities are close
 		if children_order_bias > 0.0:
 			var index_weight = remap((float(child.get_index()) / float(get_child_count())), 0.0, 1.0, 1.0, 1.0 - EPSILON)
 			utility = lerp(utility, utility * index_weight, children_order_bias)
@@ -75,11 +83,13 @@ func _select_best_state():
 		_select_new_state(null)
 		return
 	
+	# Select from top N candidates using weighted random selection
 	var select_count = min(select_from_top, queue.size())
 	if select_count == 1:
 		_select_new_state(queue.pop())
 		return
 
+	# Weighted random selection from top candidates
 	var top: Array = []
 	var weights: Array[float]
 	var total_weight: float = 0.0
@@ -89,6 +99,7 @@ func _select_best_state():
 		weights.append(w)
 		top.append(queue.pop())
 	
+	# Roulette wheel selection based on utility weights
 	var random_value = rng.randf() * total_weight
 	var best_child = 0
 	for i in select_count:

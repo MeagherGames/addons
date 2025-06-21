@@ -12,35 +12,17 @@ class_name UtilityState extends State
 func should_consider() -> bool:
 	return true
 
-## Override this function to add your own considerations
-## See [method UtilityState.consider] for an example
+## Override this function to calculate the utility of this state.
+## The utility is a value between 0 and 1, where 0 is not useful and 1 is very useful.
 ## returns 1.0 by default
 func get_utility() -> float:
 	return 1.0
-
-## consider is a helper function to calculate the utility of this state.
-## example:
-## [codeblock]
-## func get_utility(): 
-##  return (
-##		consider(remap(distance, min_distance, max_distance, 0.0, 1.0), distance_weight) *
-##  	consider(wrapf(something_else, 0.0, 1.0), some_weight)
-##  )
-##
-## func update(delta):
-##  # do stuff when selected
-## 
-## [/codeblock]
-@warning_ignore("shadowed_variable")
-func consider(value: float, weight: float = 1.0) -> float:
-	var consideration = value + (1.0 - value) * value
-	return lerp(consideration, 1.0, 1.0 - weight)
 
 ## Returns the current time in seconds.
 func get_time() -> float:
 	return Time.get_ticks_msec() / 1000.0
 
-## Returns the normalized time since some time in seconds.
+## Returns the relative time since some time in seconds.
 func get_elapsed_time(time: float) -> float:
 	var now_seconds = Time.get_ticks_msec() / 1000.0
 	var delta = (now_seconds - time)
