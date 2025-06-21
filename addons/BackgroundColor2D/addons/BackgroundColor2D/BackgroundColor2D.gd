@@ -1,7 +1,6 @@
 @tool
 extends Node2D
 
-const EDITOR_META_KEY := "__project_clear_color"
 const PROJECT_SETTING := "rendering/environment/defaults/default_clear_color"
 
 static var _project_clear_color:Color
@@ -38,3 +37,4 @@ func _notification(what: int) -> void:
         _:
             pass
     
+
