@@ -1,0 +1,11 @@
+{
+    "name": "git-commit-tracker",
+    "isProject": false,
+    "description": "Show a week heat map and calendar for git commits",
+    "category": "Misc",
+    "godotVersion": "4.4",
+    "version": "1.0.0",
+    "icon": "Icon.png",
+    "dependencies": [],
+    "ignore": []
+}

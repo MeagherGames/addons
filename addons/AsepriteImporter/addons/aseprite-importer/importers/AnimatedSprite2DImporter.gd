@@ -25,6 +25,8 @@ func _get_import_options(_path: String, _preset: int): return []
 
 func _get_option_visibility(path: String, option_name: StringName, options: Dictionary): return false
 
+func _get_option_visibility(path:String, option_name:StringName, options:Dictionary): return false
+
 func _import(source_file, save_path, options, _platform_variants, _gen_files):
 	options.layers = false
 	var data: Dictionary = Aseprite.load_file(source_file, options)

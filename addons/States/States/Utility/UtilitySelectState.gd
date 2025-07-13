@@ -4,95 +4,126 @@ class_name UtilitySelectState extends SelectState
 ## The utility select state selects a child state based on the utility of the child [UtilityState].
 ## If the child is not a [UtilityState] but still a [State], it's utility is considered to be 0. This can be used to have a fallback state.
 
-enum UpdateMode {
-	IDLE,
-	PHYSICS,
-	MANUAL
-}
+const EPSILON = 0.01
 
+## The weight of this state in the utility calculation, higher weights are more likely to be selected
+@export var weight: float = 1.0
 ## How many of the top children should be considered for selection.
-@export var select_from_top:int = 1
-@export var continue_after_completion:bool = true
-
-## The seed used for random selection. If the seed is -1, the seed is randomized.
-@warning_ignore("shadowed_global_identifier") 
-@export_range(-1, 0, 1, "or_greater") var seed:int = -1 :
-	set(value):
-		if value != seed:
-			seed = value
-			if seed >= 0:
-				rng.seed = seed
+@export_range(1, 1, 1, "or_greater") var select_from_top: int = 1
 
 ## The bias towards children with lower index. A value of 0 means no bias, a value of 1 means maximum bias.
-@export_range(0, 1, 0.01) var children_order_bias:float = 1.0
-@export var update_mode:UpdateMode = UpdateMode.IDLE
+@export_range(0, 1, 0.01) var children_order_bias: float = 1.0
 
-var rng:RandomNumberGenerator = RandomNumberGenerator.new()
+var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var _select_best_state_queued: bool = false
 
 @warning_ignore("unused_parameter")
-func _on_child_transition(new_state:State):
-	if new_state is UtilityState:
-		select_next_state()	
+func _on_transition_requested(event: TransitionEvent):
+	if (
+		event.active_state is UtilityState or
+		event.active_state is UtilitySelectState
+	):
+		var parent = get_parent()
+		if not (parent is UtilityState or parent is UtilitySelectState):
+			# We are the top level UtilitySelectState
+			# We should accept the transition
+			event.accept()
+		_queue_select_best_state()
 	else:
-		super._on_child_transition(new_state)
+		super._on_transition_requested(event)
 
-func select_next_state():
-	var queue = PriorityQueue.new(true) # max heap
+func _queue_select_best_state():
+	if _select_best_state_queued:
+		return
+	_select_best_state_queued = true
+	await _select_best_state()
+	_select_best_state_queued = false
+
+func _select_best_state():
+	if get_child_count() == 0:
+		return
+
+	if not Engine.is_in_physics_frame():
+		await get_tree().physics_frame
 	
+	var queue: PriorityQueue = PriorityQueue.new(true) # max heap
+	
+	if active_state:
+		active_state.is_enabled = false
+
+	# Calculate relative weights for utility normalization
+	var total_child_weight: float = 0.0
+	var children_to_consider: Array = []
 	for child in get_children():
-		if not child is State:
+		if not (child is UtilityState or child is UtilitySelectState) or not child.should_consider():
 			continue
+		total_child_weight += child.weight
+		children_to_consider.append(child)
+	
+	# Build priority queue of states with calculated utilities
+	for child in children_to_consider:
+		var child_factor = 1.0
+		if total_child_weight > 0.0:
+			child_factor = child.weight / total_child_weight
 
-		var utility = 0.0
-		if child is UtilityState:
-			if child.should_consider():
-				utility = child.get_utility()
-			else:
-				continue
-
+		var utility = await child.get_utility() * child_factor
 		if not is_finite(utility):
-			# if the utility is Infinity we can immediately select the child
-			super._on_child_transition(child)
+			# Infinite utility means immediate selection (emergency states)
+			_select_new_state(child)
 			return
 
-
-		# bias towards children with lower index
+		# Apply index bias to favor earlier children when utilities are close
 		if children_order_bias > 0.0:
-			var index_weight = remap((float(child.get_index()) / float(get_child_count())), 0.0, 1.0, 1.0, 0.99)
+			var index_weight = remap((float(child.get_index()) / float(get_child_count())), 0.0, 1.0, 1.0, 1.0 - EPSILON)
 			utility = lerp(utility, utility * index_weight, children_order_bias)
 		
 		queue.push(utility, child)
 	
 	if queue.is_empty():
+		_select_new_state(null)
 		return
 	
+	# Select from top N candidates using weighted random selection
 	var select_count = min(select_from_top, queue.size())
 	if select_count == 1:
-		super._on_child_transition(queue.pop())
+		_select_new_state(queue.pop())
 		return
 
-	var top:Array = []
+	# Weighted random selection from top candidates
+	var top: Array = []
+	var weights: Array[float]
+	var total_weight: float = 0.0
 	for i in select_count:
+		var w = queue.peek_priority()
+		total_weight += w
+		weights.append(w)
 		top.append(queue.pop())
+	
+	# Roulette wheel selection based on utility weights
+	var random_value = rng.randf() * total_weight
+	var best_child = 0
+	for i in select_count:
+		random_value -= weights[i]
+		if random_value <= 0.0:
+			best_child = i
+			break
+	_select_new_state(top[best_child])
 
-	if not top.is_empty():
-		if seed == -1:
-			rng.randomize()
-		var best_child = rng.randi_range(0, top.size() - 1)
-		super._on_child_transition(top[best_child])
+## Returns true if the active state should be considered for selection.
+func should_consider() -> bool:
+	var should_consider_current_active_state: bool = false
+	if active_state:
+		should_consider_current_active_state = await active_state.should_consider()
+	if not should_consider_current_active_state:
+		await _queue_select_best_state()
+	if not active_state:
+		return false
+	return await active_state.should_consider()
 
-func _notification(what):
-	if what == NOTIFICATION_READY:
-		if not current_state:
-			select_next_state()
-		if update_mode == UpdateMode.IDLE:
-			set_process(true)
-		elif update_mode == UpdateMode.PHYSICS:
-			set_physics_process(true)
-		
-	if (
-		(what == NOTIFICATION_PROCESS and update_mode == UpdateMode.IDLE) or
-		(what == NOTIFICATION_PHYSICS_PROCESS and update_mode == UpdateMode.PHYSICS)
-	):
-		if not current_state:
-			select_next_state()
+## Returns 1.0 as the utility of this state.
+func get_utility() -> float:
+	return 1.0
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_ENTER_TREE:
+		rng.seed = randi()

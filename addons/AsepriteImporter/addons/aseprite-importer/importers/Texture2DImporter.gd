@@ -32,6 +32,8 @@ func _get_import_options(_path: String, _preset: int) -> Array[Dictionary]:
 func _get_option_visibility(path: String, option_name: StringName, options: Dictionary) -> bool:
 	return true
 
+func _get_option_visibility(path:String, option_name:StringName, options:Dictionary): return false
+
 func _import(source_file, save_path, options, _platform_variants, _gen_files):
 	if options.get("grid_pack", true):
 		options.pack_mode = "grid"

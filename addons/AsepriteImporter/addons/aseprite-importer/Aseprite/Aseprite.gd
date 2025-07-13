@@ -82,6 +82,7 @@ static func find_aseprite() -> String:
 static func execute(command: String, arguments: Array = [], print_output = false) -> int:
 	var res: int = OK
 	if print_output:
+		print("Executing \"", command, "\" with arguments: ", arguments)
 		var output = []
 		var args = [
 			"--debug", # Enable debug mode
