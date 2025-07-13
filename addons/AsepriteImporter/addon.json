@@ -4,8 +4,12 @@
     "description": "Import Aseprite files",
     "category": "Tools",
     "godotVersion": "4.1",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "icon": "Icon.png",
-    "dependencies": ["DirectionalSprite3D"],
-    "ignore": ["Icon.png"]
+    "dependencies": [
+        "DirectionalSprite3D"
+    ],
+    "ignore": [
+        "Icon.png"
+    ]
 }

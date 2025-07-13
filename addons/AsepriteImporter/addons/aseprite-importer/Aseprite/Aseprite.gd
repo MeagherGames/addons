@@ -1,102 +1,110 @@
 @tool
 extends RefCounted
 
-const AsepriteFile = preload("res://addons/aseprite-importer/Aseprite/AsepriteFile.gd")
+const ASEPRITE_PATH_KEY = "filesystem/import/aseprite/path"
+
 
 static func get_global_filepath(filepath) -> String:
 	return ProjectSettings.globalize_path(filepath)
 
-static func get_data_path(filepath) -> String:
-	var name:String = filepath.get_file()
-	return OS.get_cache_dir().path_join("%s/%s-data.json" % [ProjectSettings.get_setting("application/config/name"), name])
+static func get_output_path(filepath) -> String:
+	var name: String = filepath.get_file()
+	return OS.get_cache_dir().path_join("%s/%s.json" % [ProjectSettings.get_setting("application/config/name"), name])
 
-static func get_sheet_path(filepath) -> String:
-	var name:String = filepath.get_file()
-	return OS.get_cache_dir().path_join("%s/%s-sheet.png" % [ProjectSettings.get_setting("application/config/name"), name])
-
-static func get_user_data_path(filepath) -> String:
-	var name:String = filepath.get_file()
-	return OS.get_cache_dir().path_join("%s/%s-user-data.json" % [ProjectSettings.get_setting("application/config/name"), name])
-
-static func get_tile_set_data_path(filepath) -> String:
-	var name:String = filepath.get_file()
-	return OS.get_cache_dir().path_join("%s/%s-tile-set-data.json" % [ProjectSettings.get_setting("application/config/name"), name])
-
-static func test_aseprite_path(file_path:String) -> bool:
+static func test_aseprite_path(file_path: String) -> bool:
 	if file_path == "":
 		return false
 	if execute(file_path, ["--version"]) != OK:
 		return false
 	return true
 
-static func find_aseprite() -> String:
+static func set_aseprite_path(path: String) -> void:
 	var editor_settings = EditorInterface.get_editor_settings()
-
-	if "filesystem/import/aseprite/path" in editor_settings:
-		var aseprite_path = editor_settings.get("filesystem/import/aseprite/path")
-		if test_aseprite_path(aseprite_path):
-			return aseprite_path
-
-	var locations:PackedStringArray = []
-	match OS.get_name():
-		"Windows":
-			var output = [ ]
-			OS.execute("cmd", ["/c", "ftype", "AsepriteFile"], output, true)
-			for ftype in output:
-				var exe_path = ftype.split("=", false, 1)[1]
-				locations.append(exe_path)
-
-			locations.append("C:/Program Files (x86)/Steam/steamapps/common/Aseprite/Aseprite.exe")
-			locations.append("C:/Program Files (x86)/Aseprite/Aseprite.exe")
-			locations.append("C:/Program Files/Aseprite/Aseprite.exe")
-
-		"iOS":
-			locations.append("~/Library/ApplicationSupport/Steam/steamapps/common/Aseprite/Aseprite.app/Contents/MacOS/aseprite")
-			locations.append("~/Library/Application Support/Steam/SteamApps/common/Aseprite/Aseprite.app/Contents/MacOS/aseprite")
-			locations.append("/Applications/Aseprite.app/Contents/MacOS/aseprite")
-
-		"macOS":
-			locations.append("~/Library/ApplicationSupport/Steam/steamapps/common/Aseprite/Aseprite.app/Contents/MacOS/aseprite")
-			locations.append("~/Library/Application Support/Steam/SteamApps/common/Aseprite/Aseprite.app/Contents/MacOS/aseprite")
-			locations.append("/Applications/Aseprite.app/Contents/MacOS/aseprite")
-
-	for location in locations:
-		if FileAccess.file_exists(location) and test_aseprite_path(location):
-			editor_settings.set("filesystem/import/aseprite/path", location)
-			editor_settings.add_property_info({
-				name = "filesystem/import/aseprite/path",
-				type = TYPE_STRING,
-				hint = PROPERTY_HINT_GLOBAL_FILE
-			})
-			return location
-
-	push_warning("Aseprite not found. Please set the path to Aseprite in the Editor Settings. (Project -> Project Settings -> Filesystem -> Import -> Aseprite -> Path)")
-	editor_settings.set("filesystem/import/aseprite/path", "")
+	editor_settings.set(ASEPRITE_PATH_KEY, path)
 	editor_settings.add_property_info({
-		name = "filesystem/import/aseprite/path",
+		name = ASEPRITE_PATH_KEY,
 		type = TYPE_STRING,
 		hint = PROPERTY_HINT_GLOBAL_FILE
 	})
+	editor_settings.set_initial_value(ASEPRITE_PATH_KEY, "", false)
+	prints("Set aseprite path to:", path)
+
+static func find_aseprite() -> String:
+	var editor_settings = EditorInterface.get_editor_settings()
+
+	if editor_settings.has_setting(ASEPRITE_PATH_KEY):
+		var aseprite_path = editor_settings.get(ASEPRITE_PATH_KEY)
+		if test_aseprite_path(aseprite_path):
+			return aseprite_path
+
+	var paths: PackedStringArray = []
+	match OS.get_name():
+		"Windows":
+			var output = []
+			OS.execute("cmd", ["/c", "ftype", "AsepriteFile"], output, true)
+			for ftype in output:
+				var exe_path = ftype.split("=", false, 1)[1]
+				paths.append(exe_path)
+
+			paths.append("C:/Program Files (x86)/Steam/steamapps/common/Aseprite/Aseprite.exe")
+			paths.append("C:/Program Files (x86)/Aseprite/Aseprite.exe")
+			paths.append("C:/Program Files/Aseprite/Aseprite.exe")
+
+		"iOS", "macOS":
+			paths.append("~/Library/ApplicationSupport/Steam/steamapps/common/Aseprite/Aseprite.app/Contents/MacOS/aseprite")
+			paths.append("~/Library/Application Support/Steam/SteamApps/common/Aseprite/Aseprite.app/Contents/MacOS/aseprite")
+			paths.append("/Applications/Aseprite.app/Contents/MacOS/aseprite")
+
+		"Linux", "FreeBSD", "NetBSD", "OpenBSD", "BSD":
+			# I haven't tested this
+			var output = []
+			OS.execute("find", [
+				"~/.steam/steam/steamapps/common",
+				"~/.local/bin",
+				"/usr/local/bin",
+				"/opt",
+				"-name",
+				"aseprite*"
+			], output, true)
+			for path in output:
+				paths.append(path)
+	
+	
+	for path in paths:
+		if FileAccess.file_exists(path) and test_aseprite_path(path):
+			set_aseprite_path(path)
+			return path
+
+	push_warning("Aseprite not found. Please set the path to Aseprite in the Editor Settings. (Editor > Editor Settings -> Filesystem -> Import -> Aseprite -> Path)")
+	set_aseprite_path("")
 	return ""
 
-static func execute(command:String, arguments:Array = [], print_output = false) -> int:
-	var res:int = -1
+static func execute(command: String, arguments: Array = [], print_output = false) -> int:
+	var res: int = OK
 	if print_output:
 		var output = []
-		res = OS.execute(command, arguments, output, true, true)
+		var args = [
+			"--debug", # Enable debug mode
+			"--verbose", # Enable verbose mode
+		]
+		args.append_array(arguments)
+		print("Executing \"", command, "\" with arguments: ", args)
+		res = OS.execute(command, args, output, true, true)
 		if res != OK:
-			printerr("Unable to execute \"", command,  "\" Error Code ", res, ":\n", "\n".join(PackedStringArray(output)))
+			printerr("Unable to execute \"", command, "\" Error Code ", res, ":\n", "\n".join(PackedStringArray(output)))
 	else:
 		res = OS.execute(command, arguments)
 	
 	return res
 
-static func execute_script(script_path:String, parameters:Dictionary = {}, print_output = false) -> int:
+static func execute_script(script_path: String, parameters: Dictionary = {}, print_output = false) -> int:
 	var aseprite_path = find_aseprite()
 	var arguments = [
 		"--batch", # Don't open UI
 	]
 	for param in parameters:
+		if typeof(param) == TYPE_NIL or (typeof(param) == TYPE_STRING and param == ""):
+			continue
 		arguments.append_array([
 			"--script-param", "%s=%s" % [param, parameters[param]]
 		])
@@ -104,78 +112,43 @@ static func execute_script(script_path:String, parameters:Dictionary = {}, print
 	
 	return execute(aseprite_path, arguments, print_output)
 
-static func load_file(filepath:String, options:Dictionary = {}) -> AsepriteFile:
+static func load_file(filepath: String, options: Dictionary = {}) -> Dictionary:
 	var aseprite_path = find_aseprite()
 	if aseprite_path == "":
-		return null
+		printerr("Aseprite Not Found! Please set the path to Aseprite in the Editor Settings. (Editor > Editor Settings -> Filesystem -> Import -> Aseprite -> Path)")
+		return {}
 
-	var global_filepath = get_global_filepath(filepath)
-	var data_path = get_data_path(filepath)
-	var sheet_path = get_sheet_path(filepath)
-	var user_data_path = get_user_data_path(filepath)
-	var json:JSON = JSON.new()
+	if options.get("debug", false):
+		print(options)
 	
-	# See https://www.aseprite.org/docs/cli/
-	var arguments = [
-		# "--debug", # Enable debug mode
-		"--batch", # Don't open UI
-		"--format", "json-array", # export data as json
-		"--list-tags" # get animation tags
-	]
+	return _load_data(filepath, options)
 
-	if options.get("split_layers", false):
-		arguments.append_array([
-			"--list-layers", # get layer names
-			"--split-layers" # export each layer as a separate image
-		])
+static func _load_data(filepath: String, options: Dictionary = {}) -> Dictionary:
+	var scene_script_path = ProjectSettings.globalize_path("res://addons/aseprite-importer/Aseprite/aseprite_scripts/export.lua")
+	if not FileAccess.file_exists(scene_script_path):
+		printerr("Unable to import \"%s\" script at \"%s\" not found" % [filepath, scene_script_path])
+		return {}
 
-	arguments.append_array([
-		"--data", data_path,
-		"--sheet", sheet_path,
-		global_filepath
-	])
-	
-	if execute(aseprite_path, arguments) != OK:
-		printerr("Unable to execute Aseprite")
-		return null
-	
-	if execute_script(
-		ProjectSettings.globalize_path("res://addons/aseprite-importer/Aseprite/aseprite_scripts/user_data.lua"),
-		{
-			file_path = global_filepath,
-			output_path = user_data_path
-		}
-	) != OK:
-		printerr("Unable to execute user data script")
-		return null
-	
-	# Sprite sheet, data, and user data into the AsepriteFile
-	var aseprite_file_image:Image = Image.load_from_file(sheet_path)
-	var aseprite_file_data:Dictionary
-	var aseprite_file_user_data:Array
+	var output_path = get_output_path(filepath)
+	var args = {
+		file_path = get_global_filepath(filepath),
+		output_path = output_path,
+		layers = options.get("layers", false),
+		tiles = options.get("tiles", false),
+		pack_mode = options.get("pack_mode", null),
+	}
+	if execute_script(scene_script_path, args, options.get("debug", false)) != OK:
+		printerr("Unable to import %s" % filepath)
+		return {}
 
-	var data_file = FileAccess.open(data_path, FileAccess.READ)
-	if data_file == null:
-		printerr("Unable to open data file ", data_path, " [Error ", FileAccess.get_open_error(), "]")
-		return null
-	json.parse(data_file.get_as_text())
-
+	var json = JSON.new()
+	var data = FileAccess.open(output_path, FileAccess.READ)
+	if data == null:
+		printerr("Unable to open scene file ", output_path, " [Error ", FileAccess.get_open_error(), "]")
+		return {}
+	json.parse(data.get_as_text())
 	if json.data == null:
-		printerr("Unable to parse JSON data ", data_path, json.get_error_message())
-		return null
-	aseprite_file_data = json.data
-	
-	var user_data_file = FileAccess.open(user_data_path, FileAccess.READ)
-	if user_data_file == null:
-		printerr("Unable to open user data file ", user_data_path, " [Error ", FileAccess.get_open_error(), "]")
-		return null
-	json.parse(user_data_file.get_as_text())
+		printerr("Unable to parse JSON data ", output_path, json.get_error_message())
+		return {}
 
-	if json.data == null:
-		printerr("Unable to parse JSON data ", user_data_path, json.get_error_message())
-		return null
-		
-	aseprite_file_user_data = json.data.user_data
-
-	# Normalize the data
-	return AsepriteFile.new(aseprite_file_image, aseprite_file_data, aseprite_file_user_data)
+	return json.data
