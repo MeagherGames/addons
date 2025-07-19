@@ -129,7 +129,51 @@ func create_sprite_layer(layer: Dictionary, atlas_texture: Texture, options: Dic
 
 	return layer_node
 
-func create_tilemap_layer(layer: Dictionary, texture: Texture, tile_sets: Array, options: Dictionary) -> Node2D:
+func create_tile_set_source(tile_set_data: Dictionary, atlas_texture: Texture) -> TileSetAtlasSource:
+	var tile_set_texture = AtlasTexture.new()
+	tile_set_texture.atlas = atlas_texture
+	tile_set_texture.region = Rect2(
+		tile_set_data.region.x,
+		tile_set_data.region.y,
+		tile_set_data.region.w,
+		tile_set_data.region.h
+	)
+	var tile_set_source = TileSetAtlasSource.new()
+	tile_set_source.resource_name = tile_set_data.name
+	tile_set_source.use_texture_padding = false
+	tile_set_source.texture = tile_set_texture
+	tile_set_source.texture_region_size = Vector2(
+		tile_set_data.grid.w,
+		tile_set_data.grid.h
+	)
+
+	for tile_pos in tile_set_data.tiles:
+		tile_set_source.create_tile(Vector2i(tile_pos.x, tile_pos.y))
+
+	tile_set_source.set_meta("is_aseprite_tileset", true)
+	return tile_set_source
+
+func create_tile_set(tile_set_data: Dictionary, atlas_texture: Texture) -> TileSet:
+	var tile_set = TileSet.new()
+	tile_set.tile_layout = TileSet.TILE_LAYOUT_STACKED
+	tile_set.tile_offset_axis = TileSet.TILE_OFFSET_AXIS_HORIZONTAL
+	tile_set.tile_shape = TileSet.TILE_SHAPE_SQUARE
+	tile_set.uv_clipping = true
+	tile_set.tile_size = Vector2(tile_set_data.grid.w, tile_set_data.grid.h)
+	return tile_set
+
+func update_tile_set_source(tile_set_source: TileSetAtlasSource, tile_set_data: Dictionary, atlas_texture: Texture) -> void:
+	var tile_set_texture = AtlasTexture.new()
+	tile_set_texture.atlas = atlas_texture
+	tile_set_texture.region = Rect2(
+		tile_set_data.region.x,
+		tile_set_data.region.y,
+		tile_set_data.region.w,
+		tile_set_data.region.h
+	)
+	tile_set_source.texture = tile_set_texture
+
+func create_tile_map_layer(layer: Dictionary, atlas_texture: Texture, tile_sets: Array, options: Dictionary) -> Node2D:
 	var layer_node: TileMapLayer = TileMapLayer.new()
 	layer_node.name = layer.name
 	layer_node.visible = layer.visible
@@ -143,52 +187,45 @@ func create_tilemap_layer(layer: Dictionary, texture: Texture, tile_sets: Array,
 	var tile_set_source_id: int = 0
 
 	if tile_set == null:
-		tile_set = TileSet.new()
-		tile_set.tile_layout = TileSet.TILE_LAYOUT_STACKED
-		tile_set.tile_offset_axis = TileSet.TILE_OFFSET_AXIS_HORIZONTAL
-		tile_set.tile_shape = TileSet.TILE_SHAPE_SQUARE
-		tile_set.uv_clipping = true
-		tile_set.tile_size = Vector2(tile_set_data.grid.w, tile_set_data.grid.h)
-
-		var tile_set_texture = AtlasTexture.new()
-		tile_set_texture.atlas = texture
-		tile_set_texture.region = Rect2(
-			tile_set_data.region.x,
-			tile_set_data.region.y,
-			tile_set_data.region.w,
-			tile_set_data.region.h
-		)
-
-		var tile_set_source: TileSetAtlasSource = TileSetAtlasSource.new()
-		tile_set_source.use_texture_padding = false
-		tile_set_source.texture = tile_set_texture
-		tile_set_source.texture_region_size = Vector2(
-			tile_set_data.grid.w,
-			tile_set_data.grid.h
-		)
-
-		for tile_pos in tile_set_data.tiles:
-			prints(tile_pos)
-			tile_set_source.create_tile(Vector2i(tile_pos.x, tile_pos.y))
-
-		tile_set.add_source(tile_set_source, tile_set_source_id)
-
-		if options.get("export_tileset", true):
-			ResourceSaver.save(tile_set, tile_set_path)
+		tile_set = create_tile_set(tile_set_data, atlas_texture)
+		var tile_set_source = create_tile_set_source(tile_set_data, atlas_texture)
+		tile_set_source_id = tile_set.add_source(tile_set_source)
+	else:
+		# find tile_set_source with metadata
+		tile_set_source_id = 0
+		var tile_set_source: TileSetAtlasSource = null
+		for i in tile_set.get_source_count():
+			var source_id = tile_set.get_source_id(i)
+			tile_set_source = tile_set.get_source(source_id)
+			if tile_set_source is TileSetAtlasSource and tile_set_source.get_meta("is_aseprite_tileset", false):
+				tile_set_source_id = source_id
+		
+		if tile_set_source == null or not tile_set_source is TileSetAtlasSource:
+			tile_set_source = create_tile_set_source(tile_set_data, atlas_texture)
+			tile_set_source_id = tile_set.add_source(tile_set_source)
+		else:
+			update_tile_set_source(tile_set_source, tile_set_data, atlas_texture)
+	
+	if options.get("export_tileset", true):
+		ResourceSaver.save(tile_set, tile_set_path)
 		
 	layer_node.tile_set = tile_set
 	var size: Vector2i = Vector2i(
 		layer.frames[0].region.w,
 		layer.frames[0].region.h
 	)
-	var pattern: TileMapPattern = TileMapPattern.new()
-	pattern.set_size(size)
+	
 	for i in layer.frames[0].tiles.size():
 		var tile: int = layer.frames[0].tiles[i]
+		var coords = Vector2i(
+			(i % size.x) + layer.frames[0].region.x,
+			(i / size.x) + layer.frames[0].region.y
+		)
 
 		if tile == 0:
+			# Don't need to clear the cell, as it is already empty, but this is the code
+			# layer_node.set_cell(coords, -1, -Vector2i.ONE, -1)
 			continue
-
 		
 		var tile_id: int = (tile & 0x1fffffff) - 1
 		var flip_h: bool = tile & 0x80000000 != 0
@@ -198,10 +235,6 @@ func create_tilemap_layer(layer: Dictionary, texture: Texture, tile_sets: Array,
 		var tile_coords = Vector2i(
 			tile_set_data.tiles[tile_id].x,
 			tile_set_data.tiles[tile_id].y
-		)
-		var coords = Vector2i(
-			(i % size.x) + layer.frames[0].region.x,
-			(i / size.x) + layer.frames[0].region.y
 		)
 
 		var alternative_id: int = 0
@@ -219,7 +252,7 @@ func create_tilemap_layer(layer: Dictionary, texture: Texture, tile_sets: Array,
 
 func create_layer(layer: Dictionary, texture: Texture, tile_sets: Array, options: Dictionary) -> Node2D:
 	if layer.is_tilemap:
-		return create_tilemap_layer(layer, texture, tile_sets, options)
+		return create_tile_map_layer(layer, texture, tile_sets, options)
 	else:
 		return create_sprite_layer(layer, texture, options)
 
@@ -281,12 +314,12 @@ func animate_sprite_layer(animation_data: Dictionary, animation: Animation, laye
 		)
 		timing += frame.duration
 
-func animate_tilemap_layer(animation_data: Dictionary, animation: Animation, layer_data: Dictionary, has_layers: bool = false) -> void:
+func animate_tile_map_layer(animation_data: Dictionary, animation: Animation, layer_data: Dictionary, has_layers: bool = false) -> void:
 	# Tilemap animations are not implemented yet
 	pass
 
 func animate_layer(animation_data: Dictionary, layer_data: Dictionary, animation: Animation, has_layers: bool = false) -> void:
 	if layer_data.is_tilemap:
-		animate_tilemap_layer(animation_data, animation, layer_data, has_layers)
+		animate_tile_map_layer(animation_data, animation, layer_data, has_layers)
 	else:
 		animate_sprite_layer(animation_data, animation, layer_data, has_layers)

@@ -11,6 +11,7 @@ function get_tileset_id(tileset)
 end
 
 local TileSet = {
+    name = "",
     grid = {
         x = 0,
         y = 0,
@@ -75,6 +76,7 @@ function TileSet:from_tile_set(tileset)
     setmetatable(o, self)
     self.__index = self
 
+    o.name = tileset.name
     o.grid = {
         x = tileset.grid.origin.x,
         y = tileset.grid.origin.y,
@@ -88,6 +90,7 @@ end
 
 function TileSet:to_json()
     local data = {
+        name = self.name,
         grid = {
             x = self.grid.x,
             y = self.grid.y,
@@ -106,9 +109,7 @@ function TileSet:to_json()
     for _, tile in ipairs(self.tiles) do
         table.insert(data.tiles, {
             x = tile.x,
-            y = tile.y,
-            w = tile.w,
-            h = tile.h
+            y = tile.y
         })
     end
 
