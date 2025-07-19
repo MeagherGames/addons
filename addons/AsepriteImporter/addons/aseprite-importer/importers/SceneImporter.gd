@@ -52,16 +52,13 @@ func _import(source_file, save_path, options, _platform_variants, _gen_files):
 
 	var atlas_texture = ImageTexture.create_from_image(Image.load_from_file(data.meta.atlas_path))
 
-	var root: Node
+	var root: Node2D
 	if data.layers.size() > 1:
-		root = CanvasGroup.new()
-		root.fit_margin = 0
-		root.clear_margin = 0
-
+		root = Node2D.new()
 		for layer in data.layers:
 			var layer_node = create_layer(layer, atlas_texture, data.tile_sets, options)
 			if options.get("groups", false):
-				group_node(layer.group, layer_node, root)
+				create_group_node(layer.group, layer_node, root)
 			else:
 				root.add_child(layer_node, true)
 				layer_node.owner = root
@@ -256,7 +253,7 @@ func create_layer(layer: Dictionary, texture: Texture, tile_sets: Array, options
 	else:
 		return create_sprite_layer(layer, texture, options)
 
-func group_node(group: Array[String], layer_node: Node2D, root: Node) -> void:
+func create_group_node(group: Array[String], layer_node: Node2D, root: Node) -> void:
 	if group.size() > 0:
 		var group_node = root
 		for group_name in group:
@@ -274,7 +271,7 @@ func group_node(group: Array[String], layer_node: Node2D, root: Node) -> void:
 		layer_node.owner = root
 
 
-func animate_sprite_layer(animation_data: Dictionary, animation: Animation, layer_data: Dictionary, has_layers: bool = false) -> void:
+func animate_sprite_layer(animation: Animation, layer_data: Dictionary, has_layers: bool = false) -> void:
 	var region_frame_track = animation.add_track(Animation.TYPE_VALUE)
 	animation.value_track_set_update_mode(region_frame_track, Animation.UPDATE_DISCRETE)
 	animation.track_set_interpolation_loop_wrap(region_frame_track, false)
@@ -314,12 +311,12 @@ func animate_sprite_layer(animation_data: Dictionary, animation: Animation, laye
 		)
 		timing += frame.duration
 
-func animate_tile_map_layer(animation_data: Dictionary, animation: Animation, layer_data: Dictionary, has_layers: bool = false) -> void:
-	# Tilemap animations are not implemented yet
+func animate_tile_map_layer(_animation: Animation, _layer_data: Dictionary, _has_layers: bool = false) -> void:
+	# Tilemap animations are not implemented yet -- might never be implemented
 	pass
 
-func animate_layer(animation_data: Dictionary, layer_data: Dictionary, animation: Animation, has_layers: bool = false) -> void:
+func animate_layer(animation: Animation, layer_data: Dictionary, has_layers: bool = false) -> void:
 	if layer_data.is_tilemap:
-		animate_tile_map_layer(animation_data, animation, layer_data, has_layers)
+		animate_tile_map_layer(animation, layer_data, has_layers)
 	else:
-		animate_sprite_layer(animation_data, animation, layer_data, has_layers)
+		animate_sprite_layer(animation, layer_data, has_layers)
