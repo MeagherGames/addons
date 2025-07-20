@@ -78,7 +78,7 @@ func _import(source_file, save_path, options, _platform_variants, _gen_files):
 		animation.length = animation_data.duration
 
 		for layer in data.layers:
-			animate_layer(animation_data, layer, animation, data.layers.size() > 1)
+			animate_layer(animation, layer, data.layers.size() > 1)
 
 		animation_library.add_animation(animation_data.name, animation)
 		if animation_data.autoplay:

@@ -32,12 +32,7 @@ function Frame:new()
         x = 0,
         y = 0
     }
-    o.region = {
-        x = 0,
-        y = 0,
-        w = 0,
-        h = 0
-    }
+    o.region = atlas:use_empty_region()
     o.data = {}
     return o
 end

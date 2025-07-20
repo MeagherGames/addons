@@ -1,15 +1,35 @@
 local Atlas = {
     width = 0,
     height = 0,
+    empty_region = nil, -- This will be set to a default empty region
     images = {}, -- This will hold the images added to the atlas
     data = {} -- Key is an image, value is the region
 }
 
+function Atlas:use_empty_region()
+    if not self.empty_region then
+        self.empty_region = {
+            x = 0,
+            y = 0,
+            w = 1,
+            h = 1
+        }
+        table.insert(self.data, {
+            image = nil,
+            region = self.empty_region
+        })
+    end
+    return self.empty_region
+end
+
 function Atlas:add_image(image, region, offset_x, offset_y)
     assert(image, "Image cannot be nil")
     assert(region, "Region cannot be nil")
+    assert(image.width and image.height, "Image must have width and height")
     assert(image.width > 0 and image.height > 0, "Image must have a valid size")
-    assert(self.images[image] == nil, "Image already added to atlas")
+    if self.images[image] ~= nil then
+        return -- Image already added
+    end
     -- offsets only used for grid packing
     region.offset_x = offset_x or 0
     region.offset_y = offset_y or 0
@@ -46,7 +66,6 @@ function Atlas:pack_grid(grid_width)
 
     -- Position each image in the grid
     for i, item in ipairs(self.data) do
-        local image = item.image
         local region = item.region
 
         -- Calculate grid position (0-indexed)
@@ -94,7 +113,6 @@ function Atlas:pack_scan()
     end)
 
     for _, item in ipairs(images_to_pack) do
-        local image = item.image
         local region = item.region
 
         local pos = self:find_region_position(region, placed_regions, atlas_width, atlas_height)
