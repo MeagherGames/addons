@@ -1,0 +1,11 @@
+{
+    "name": "MultiplayerSceneManager",
+    "isProject": false,
+    "description": "Multiplayer Scene Manager that handles controlling what instances of nodes are visible to a client application from a server and syncing state between those clients",
+    "category": "Multiplayer",
+    "godotVersion": "4.1",
+    "version": "1.0.0",
+    "icon": "Icon.png",
+    "dependencies": [],
+    "ignore": []
+}
