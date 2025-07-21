@@ -87,7 +87,7 @@ func load_scene(peer_id:int, path:String, instanced:bool) -> void:
 	var node_path = get_node_path(peer_id, scene_path, spawn_node,instanced)
 	if get_tree().root.get_node_or_null(node_path) != null:
 		clients[peer_id]["active_scene"] = node_path
-			loaded_scenes[String(node_path)] += 1
+		loaded_scenes[String(node_path)] += 1
 	else:
 		var scene = scene_spawner.spawn({
 			"peer_id": peer_id,
