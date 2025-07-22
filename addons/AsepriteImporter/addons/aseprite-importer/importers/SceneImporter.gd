@@ -135,10 +135,13 @@ func create_tile_set_source(tile_set_data: Dictionary, atlas_texture: Texture) -
 		tile_set_data.region.w,
 		tile_set_data.region.h
 	)
+
 	var tile_set_source = TileSetAtlasSource.new()
 	tile_set_source.resource_name = tile_set_data.name
-	tile_set_source.use_texture_padding = false
+	tile_set_source.use_texture_padding = true
 	tile_set_source.texture = tile_set_texture
+	tile_set_source.margins = Vector2i.ZERO
+	tile_set_source.separation = Vector2i.ONE * tile_set_data.padding
 	tile_set_source.texture_region_size = Vector2(
 		tile_set_data.grid.w,
 		tile_set_data.grid.h
@@ -168,7 +171,17 @@ func update_tile_set_source(tile_set_source: TileSetAtlasSource, tile_set_data: 
 		tile_set_data.region.w,
 		tile_set_data.region.h
 	)
+
+	tile_set_source.resource_name = tile_set_data.name
+	tile_set_source.use_texture_padding = true
 	tile_set_source.texture = tile_set_texture
+	tile_set_source.margins = Vector2i.ZERO
+	tile_set_source.separation = Vector2i.ONE * tile_set_data.padding
+	tile_set_source.texture_region_size = Vector2(
+		tile_set_data.grid.w,
+		tile_set_data.grid.h
+	)
+
 
 func create_tile_map_layer(layer: Dictionary, atlas_texture: Texture, tile_sets: Array, options: Dictionary) -> Node2D:
 	var layer_node: TileMapLayer = TileMapLayer.new()
@@ -196,6 +209,7 @@ func create_tile_map_layer(layer: Dictionary, atlas_texture: Texture, tile_sets:
 			tile_set_source = tile_set.get_source(source_id)
 			if tile_set_source is TileSetAtlasSource and tile_set_source.get_meta("is_aseprite_tileset", false):
 				tile_set_source_id = source_id
+				break
 		
 		if tile_set_source == null or not tile_set_source is TileSetAtlasSource:
 			tile_set_source = create_tile_set_source(tile_set_data, atlas_texture)

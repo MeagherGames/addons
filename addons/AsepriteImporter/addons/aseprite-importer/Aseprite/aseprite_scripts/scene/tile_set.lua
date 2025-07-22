@@ -12,6 +12,7 @@ end
 
 local TileSet = {
     name = "",
+    padding = 0, -- Padding between tiles
     grid = {
         x = 0,
         y = 0,
@@ -41,8 +42,8 @@ function TileSet:generate_image(tileset)
     local h = self.grid.h * vframes
 
     local spec = ImageSpec {
-        width = w,
-        height = h,
+        width = w + self.padding * (hframes - 1),
+        height = h + self.padding * (vframes - 1),
         colorMode = app.sprite.colorMode
     }
     local image = Image(spec)
@@ -56,8 +57,8 @@ function TileSet:generate_image(tileset)
 
         local h = (i % chunk_width)
         local v = math.floor(i / chunk_width)
-        local x = h * self.grid.w
-        local y = v * self.grid.h
+        local x = h * self.grid.w + h * self.padding
+        local y = v * self.grid.h + v * self.padding
 
         table.insert(self.tiles, {
             x = h,
@@ -91,6 +92,7 @@ end
 function TileSet:to_json()
     local data = {
         name = self.name,
+        padding = self.padding,
         grid = {
             x = self.grid.x,
             y = self.grid.y,

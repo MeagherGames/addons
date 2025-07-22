@@ -1,6 +1,7 @@
 local Atlas = {
     width = 0,
     height = 0,
+    padding = 1,
     empty_region = nil, -- This will be set to a default empty region
     images = {}, -- This will hold the images added to the atlas
     data = {} -- Key is an image, value is the region
@@ -163,7 +164,7 @@ function Atlas:find_region_position(region, placed_regions, atlas_width, atlas_h
 
     for a = 0, max_a do
         for b = 0, max_b do
-            if not self:overlaps_with_placed(a, b, region.w, region.h, 1, placed_regions) then
+            if not self:overlaps_with_placed(a, b, region.w, region.h, placed_regions) then
                 return {
                     x = a,
                     y = b
@@ -177,10 +178,10 @@ function Atlas:find_region_position(region, placed_regions, atlas_width, atlas_h
     }
 end
 
-function Atlas:overlaps_with_placed(x, y, width, height, padding, placed_regions)
+function Atlas:overlaps_with_placed(x, y, width, height, placed_regions)
     for _, region in ipairs(placed_regions) do
-        if not (x >= region.x + region.w + padding or x + width + padding <= region.x or y >= region.y + region.h +
-            padding or y + height + padding <= region.y) then
+        if not (x >= region.x + region.w + self.padding or x + width + self.padding <= region.x or y >= region.y +
+            region.h + self.padding or y + height + self.padding <= region.y) then
             return true
         end
     end
