@@ -53,3 +53,7 @@ func aabb_within_frustum(aabb: AABB) -> bool:
 		if point_within_frustum(corner):
 			return true
 	return false
+
+func get_projection() -> Projection:
+	var projection = Projection.create_perspective(vfov, view_size.x / view_size.y, near, far)
+	return projection
