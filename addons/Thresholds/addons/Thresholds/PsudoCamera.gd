@@ -4,11 +4,14 @@ extends Node3D
 @export var far:float = 1000.0 # Far clipping distance
 @export var near:float = 0.1 # Near clipping distance
 @export var real_camera: Camera3D
+@export_group("Multiplayer", "multiplayer_")
+@export var multiplayer_client_can_set_camera: bool = true
 var vfov:float
 var hfov:float
 
+
 func _ready() -> void:
-	if real_camera:
+	if real_camera and (not multiplayer.is_server() or multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
 		# calculate FOV based on parent camera and viewport size
 		var viewport = get_viewport()
 		if not viewport:
@@ -19,6 +22,16 @@ func _ready() -> void:
 		hfov = 2.0 * rad_to_deg(atan(tan(deg_to_rad(vfov / 2.0)) * aspect_ratio))
 		far = real_camera.far
 		near = real_camera.near
+		if multiplayer_client_can_set_camera and not multiplayer.is_server():
+			# Update the server with the camera parameters
+			_update_server_camera.rpc_id(1, {
+				"view_size": view_size,
+				"fov": fov,
+				"far": far,
+				"near": near,
+				"vfov": vfov,
+				"hfov": hfov
+			})
 	else:
 		var aspect_ratio = view_size.x / view_size.y
 		vfov = fov  # Use the exported vertical FOV
@@ -57,3 +70,14 @@ func aabb_within_frustum(aabb: AABB) -> bool:
 func get_projection() -> Projection:
 	var projection = Projection.create_perspective(vfov, view_size.x / view_size.y, near, far)
 	return projection
+
+@rpc("any_peer","call_remote","reliable")
+func _update_server_camera(data:Dictionary) -> void:
+	if not multiplayer.is_server() or not multiplayer_client_can_set_camera:
+		return
+	view_size = data.view_size
+	fov = data.fov
+	far = data.far
+	near = data.near
+	vfov = data.vfov
+	hfov = data.hfov

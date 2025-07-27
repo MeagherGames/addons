@@ -39,25 +39,23 @@ var detected: bool = false:
 		detected = value
 		detection_changed.emit(detected)
 
-var psudo_cameras_in_areas: Array[PsudoCamera] = []
+var psudo_cameras_in_areas: Dictionary[int, PsudoCamera] = {}
 var _shape_points: PackedVector3Array
 
-var _threads: Array[Thread] = []
+class EThread:
+	extends RefCounted
+	var thread: Thread
+	var exiting: bool = false
+
+var _threads: Dictionary[int, EThread] = {}
 var mutex: Mutex = Mutex.new()
 var semaphore: Semaphore = Semaphore.new()
-var exiting: bool = false
 var physics_queries: Array[Dictionary] = []
 
-func _get_aabb() -> AABB:
-	var aabb:AABB = AABB()
-	if not shape:
-		return aabb
-	aabb.size = shape.size * 2.0
-	aabb.position = (-shape.size * 0.5) + global_transform.origin
-	aabb.position = global_transform.basis * aabb.position
-	return aabb
-
 func _ready() -> void:
+	if not multiplayer.is_server() and not multiplayer.multiplayer_peer is OfflineMultiplayerPeer:
+		set_physics_process(false)
+		return
 	if not Engine.is_editor_hint():
 		entrance_area.body_entered.connect(_on_entered.bind(entrance_area))
 		entrance_area.body_exited.connect(_on_exited.bind(entrance_area))
@@ -85,6 +83,15 @@ func _ready() -> void:
 		mesh_instance.material_override = THRESHOLD_EDITOR_MATERIAL
 		mesh_instance.material_override.albedo_color = Color(debug_color.r, debug_color.g, debug_color.b, THRESHOLD_EDITOR_MATERIAL.albedo_color.a) # Semi-transparent
 		add_child(mesh_instance, false, INTERNAL_MODE_BACK)
+
+func _get_aabb() -> AABB:
+	var aabb:AABB = AABB()
+	if not shape:
+		return aabb
+	aabb.size = shape.size * 2.0
+	aabb.position = (-shape.size * 0.5) + global_transform.origin
+	aabb.position = global_transform.basis * aabb.position
+	return aabb
 
 
 func _get_corners(aabb: AABB, sort_fn = null) -> PackedVector3Array:
@@ -167,11 +174,11 @@ func _ray_to_triangle(occluding_triangle: PackedVector3Array, from: Vector3, to:
 	var tt = (uv * wu - uu * wv) / denominator
 	return s >= 0 and tt >= 0 and s + tt <= 1
 
-func _is_threshold_visible(psudo_camera: PsudoCamera, body: PhysicsBody3D):
+func _is_threshold_visible(index:int, psudo_camera: PsudoCamera, body: PhysicsBody3D):
 	while true:
 		semaphore.wait()
 		mutex.lock()
-		var exit = exiting
+		var exit = _threads[index].exiting
 		mutex.unlock()
 		if exit:
 			return
@@ -215,12 +222,14 @@ func _is_threshold_visible(psudo_camera: PsudoCamera, body: PhysicsBody3D):
 
 
 func _physics_process(delta: float) -> void:
-	if Engine.is_editor_hint() or (not enabled) or psudo_cameras_in_areas.is_empty():
+	if Engine.is_editor_hint() or (not enabled):
 		return
 	var current_detection: bool = false
 	var physics_space_state = get_world_3d().direct_space_state
-	for thread in _threads:
+	mutex.lock()
+	for thread in _threads.keys():
 		semaphore.post()
+	mutex.unlock()
 	await get_tree().physics_frame
 	mutex.lock()
 	var pending_queries = physics_queries.duplicate()
@@ -242,14 +251,15 @@ func _on_entered(body:PhysicsBody3D, detection_area: Area3D) -> void:
 				break
 		if not psudo_camera:
 			return
-		psudo_cameras_in_areas.append(psudo_camera)
-		if psudo_cameras_in_areas.size() > _threads.size():
-			# If we have more psudo_cameras than threads, we need to add a new thread
-			_threads.append(Thread.new())
-		var index = _threads.size() - 1
-		if not _threads[index].is_started():
-			_threads[index].start(_is_threshold_visible.bind(psudo_camera, psudo_camera.get_parent()))
-
+		var index = psudo_camera.get_instance_id()
+		psudo_cameras_in_areas[index] = psudo_camera
+		mutex.lock()
+		# If we have more psudo_cameras than threads, we need to add a new thread
+		var thread: EThread = EThread.new()
+		thread.thread = Thread.new()
+		_threads[index] = thread
+		_threads[index].thread.start(_is_threshold_visible.bind(index, psudo_camera, body))
+		mutex.unlock()
 
 func _on_exited(body:PhysicsBody3D, detection_area: Area3D) -> void:
 	if enabled:
@@ -260,17 +270,31 @@ func _on_exited(body:PhysicsBody3D, detection_area: Area3D) -> void:
 				break
 		if not psudo_camera:
 			return
-		var index = psudo_cameras_in_areas.find(psudo_camera)
-		if index != -1:
-			psudo_cameras_in_areas.remove_at(index)
-		if index < _threads.size():
-			_threads[index].wait_to_finish()
-			_threads.remove_at(index)
-
+		var index = psudo_camera.get_instance_id()
+		if psudo_cameras_in_areas.has(index):
+			psudo_cameras_in_areas.erase(index)
+		mutex.lock()
+		if _threads.has(index):
+			_threads[index].exiting = true
+			mutex.unlock()
+			semaphore.post()
+			_threads[index].thread.wait_to_finish()
+			mutex.lock()
+			_threads.erase(index)
+			print("threads left: ", _threads.size())
+		mutex.unlock()
 
 func _exit_tree() -> void:
-	for thread in _threads:
-		if thread.is_started():
-			thread.wait_to_finish()
+	if Engine.is_editor_hint() or not multiplayer.is_server():
+		return
+	mutex.lock()
+	for index in _threads.keys():
+		if _threads[index].thread.is_started():
+			_threads[index].exiting = true
+			mutex.unlock()
+			semaphore.post()
+			mutex.lock()
+			_threads[index].thread.wait_to_finish()
+			mutex.unlock()
 	_threads.clear()
 	psudo_cameras_in_areas.clear()
