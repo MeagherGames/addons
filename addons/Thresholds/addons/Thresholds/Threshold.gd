@@ -178,7 +178,7 @@ func _is_threshold_visible(psudo_camera: PsudoCamera, body: PhysicsBody3D):
 		if not psudo_camera:
 			return
 		var aabb: AABB = _get_aabb()
-		if not psudo_camera.aabb_within_frustum(aabb):
+		if not psudo_camera.aabb_within_frustum(aabb.grow(-0.05)):
 			continue
 		var corners = _get_corners(_get_aabb())
 		if corners.is_empty():
@@ -186,6 +186,8 @@ func _is_threshold_visible(psudo_camera: PsudoCamera, body: PhysicsBody3D):
 		var occluding_triangles: Array[PackedVector3Array] = _get_cube_faces(corners)
 		var visible_corners: PackedVector3Array = PackedVector3Array()
 		for corner in corners:
+			if not psudo_camera.point_within_frustum(corner):
+					continue
 			var blocked = false
 			for occluding_triangle in occluding_triangles:
 				if occluding_triangle.has(corner):
