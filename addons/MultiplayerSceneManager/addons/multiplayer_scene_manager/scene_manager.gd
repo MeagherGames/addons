@@ -8,7 +8,6 @@ var loaded_scenes:Dictionary = {}
 func _get_instanced_node_path(node_path:NodePath, peer_id:int, instanced:bool) -> NodePath:
 	# Helper function to get the correct scene path for instanced scenes.
 	if instanced:
-		print_debug("Instancing node path: ", node_path, " for peer_id: ", peer_id)
 		return NodePath(String(node_path) + "_" + str(peer_id))
 	else:
 		return node_path
@@ -17,6 +16,7 @@ func get_node_path(peer_id:int, path:String, parent:Node,instanced: bool) -> Nod
 	var scene_path:String = path
 	if path.begins_with("uid://"):
 		# If the scene path is a UID, convert it to a scene path.
+		print(path)
 		var uid = ResourceUID.text_to_id(path)
 		scene_path = ResourceUID.get_id_path(uid)
 	elif not ResourceLoader.exists(scene_path):
@@ -84,7 +84,8 @@ func load_scene(peer_id:int, path:String, instanced:bool) -> void:
 	var node_path = get_node_path(peer_id, scene_path, spawn_node,instanced)
 	if get_tree().root.get_node_or_null(node_path) != null:
 		clients[peer_id]["active_scene"] = node_path
-		loaded_scenes[String(node_path)] += 1
+		loaded_scenes[String(node_path)]["count"] += 1
+		loaded_scenes[String(node_path)]["clients"].append(peer_id)
 	else:
 		var scene = scene_spawner.spawn({
 			"peer_id": peer_id,
@@ -93,7 +94,7 @@ func load_scene(peer_id:int, path:String, instanced:bool) -> void:
 			"node_path": node_path
 		})
 		clients[peer_id]["active_scene"] = node_path
-		loaded_scenes[String(node_path)] = 1
+		loaded_scenes[String(node_path)] = { "count": 1, "clients": [peer_id] }
 
 
 func unload_scene(peer_id:int, node_path:NodePath) -> void:
@@ -101,20 +102,14 @@ func unload_scene(peer_id:int, node_path:NodePath) -> void:
 		push_error("Only the server can unload scenes.")
 		return
 	# This function is called by the client to unload a scene.
-	print_debug("Unloading scene for peer_id: ", peer_id, " at node_path: ", node_path)
 	var node = get_tree().root.get_node_or_null(node_path)
-	print_debug("has node path: ", has_node(node_path))
-	print_debug("Node found for unloading: ", node.name if node else "None")
 	if node:
-		print_debug("Node found for unloading: ", node.name)
 		if clients.has(peer_id) and clients[peer_id]["active_scene"] == node_path:
-			print_debug("Removing active scene for peer_id: ", peer_id)
 			clients[peer_id]["active_scene"] = NodePath()
 		if loaded_scenes.has(String(node_path)):
-			print_debug("Decreasing loaded scenes count for: ", String(node_path))
-			loaded_scenes[String(node_path)] -= 1
-			print_debug("Loaded scenes count for ", String(node_path), ": ", loaded_scenes[String(node_path)])
-			if loaded_scenes[String(node_path)] <= 0:
+			loaded_scenes[String(node_path)].count -= 1
+			loaded_scenes[String(node_path)].clients.erase(peer_id)
+			if loaded_scenes[String(node_path)].count <= 0:
 				loaded_scenes.erase(String(node_path))
 				node.get_parent().remove_child(node)
 				node.queue_free()
@@ -136,7 +131,6 @@ func spawn_scene(data:Dictionary) -> Node:
 	var scene:Node = packed_scene.instantiate()
 	if data.instanced:
 		scene.name = scene.name + "_" + str(data.peer_id)
-	print_debug("Spawning scene: ", scene.name, " for peer_id: ", data.peer_id, " at node_path: ", data.node_path)
 	if (scene.has_node("MultiplayerSynchronizer")):
 		var synchronizer = scene.get_node("MultiplayerSynchronizer")
 		synchronizer.set_multiplayer_authority(1)  # Server has authority

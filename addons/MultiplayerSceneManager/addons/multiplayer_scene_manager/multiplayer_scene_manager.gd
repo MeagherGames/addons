@@ -2,7 +2,7 @@
 extends EditorPlugin
 
 const AUTOLOAD_NAME = "MultiplayerSceneManager"
-const AUTOLOAD_PATH = "res://addons/multiplayeraddon/mp_scene_manager.gd"
+const AUTOLOAD_PATH = "res://addons/multiplayer_scene_manager/scene_manager.gd"
 
 func _enter_tree() -> void:
 	# Initialization of the plugin goes here.
