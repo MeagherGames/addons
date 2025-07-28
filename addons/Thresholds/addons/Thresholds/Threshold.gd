@@ -39,15 +39,32 @@ var detected: bool = false:
 		detected = value
 		detection_changed.emit(detected)
 
-var psudo_cameras_in_areas: Dictionary[int, PsudoCamera] = {}
+var psudo_cameras_in_areas: Array[PsudoCamera] = []
 var _shape_points: PackedVector3Array
 
 class EThread:
 	extends RefCounted
 	var thread: Thread
 	var exiting: bool = false
-
-var _threads: Dictionary[int, EThread] = {}
+@export var use_seperate_thread_for_occlusion: bool = false:
+	set(value):
+		use_seperate_thread_for_occlusion = value
+		if Engine.is_editor_hint():
+			return
+		if use_seperate_thread_for_occlusion:
+			if not thread.thread:
+				thread.thread = Thread.new()
+				thread.exiting = false
+				thread.thread.start(_is_threshold_visible)
+		else:
+			if thread.thread:
+				mutex.lock()
+				thread.exiting = true
+				semaphore.post()
+				mutex.unlock()
+				thread.thread.wait_to_finish()
+				thread.thread = null
+var thread: EThread = EThread.new()
 var mutex: Mutex = Mutex.new()
 var semaphore: Semaphore = Semaphore.new()
 var physics_queries: Array[Dictionary] = []
@@ -57,6 +74,10 @@ func _ready() -> void:
 		set_physics_process(false)
 		return
 	if not Engine.is_editor_hint():
+		if use_seperate_thread_for_occlusion:
+			thread.thread = Thread.new()
+			thread.exiting = false
+			thread.thread.start(_is_threshold_visible)
 		entrance_area.body_entered.connect(_on_entered.bind(entrance_area))
 		entrance_area.body_exited.connect(_on_exited.bind(entrance_area))
 		exit_area.body_entered.connect(_on_entered.bind(exit_area))
@@ -174,36 +195,51 @@ func _ray_to_triangle(occluding_triangle: PackedVector3Array, from: Vector3, to:
 	var tt = (uv * wu - uu * wv) / denominator
 	return s >= 0 and tt >= 0 and s + tt <= 1
 
-func _is_threshold_visible(index:int, psudo_camera: PsudoCamera, body: PhysicsBody3D):
+func _is_threshold_visible():
 	while true:
 		semaphore.wait()
 		mutex.lock()
-		var exit = _threads[index].exiting
+		var exit = thread.exiting
 		mutex.unlock()
 		if exit:
 			return
+		mutex.lock()
+		var psudo_cameras = psudo_cameras_in_areas.duplicate()
+		mutex.unlock()
+		_generate_physics_queries(psudo_cameras)
+
+func _pre_occlusion(psudo_camera: PsudoCamera) -> PackedVector3Array:
+	var aabb: AABB = _get_aabb()
+	if not psudo_camera.aabb_within_frustum(aabb.grow(-0.05)):
+		return PackedVector3Array()
+	var corners = _get_corners(_get_aabb())
+	if corners.is_empty():
+		return PackedVector3Array()
+	var occluding_triangles: Array[PackedVector3Array] = _get_cube_faces(corners)
+	var visible_corners: PackedVector3Array = PackedVector3Array()
+	for corner in corners:
+		if not psudo_camera.point_within_frustum(corner):
+				continue
+		var blocked = false
+		for occluding_triangle in occluding_triangles:
+			if occluding_triangle.has(corner):
+				continue
+			if _ray_to_triangle(occluding_triangle, corner, psudo_camera.global_transform.origin):
+				blocked = true
+				break
+		if not blocked and not visible_corners.has(corner):
+			visible_corners.append(corner)
+
+	return visible_corners
+
+func _generate_physics_queries(psudo_cameras: Array[PsudoCamera]) -> void:
+	for psudo_camera in psudo_cameras:
 		if not psudo_camera:
 			return
-		var aabb: AABB = _get_aabb()
-		if not psudo_camera.aabb_within_frustum(aabb.grow(-0.05)):
-			continue
-		var corners = _get_corners(_get_aabb())
-		if corners.is_empty():
-			continue
-		var occluding_triangles: Array[PackedVector3Array] = _get_cube_faces(corners)
-		var visible_corners: PackedVector3Array = PackedVector3Array()
-		for corner in corners:
-			if not psudo_camera.point_within_frustum(corner):
-					continue
-			var blocked = false
-			for occluding_triangle in occluding_triangles:
-				if occluding_triangle.has(corner):
-					continue
-				if _ray_to_triangle(occluding_triangle, corner, psudo_camera.global_transform.origin):
-					blocked = true
-					break
-			if not blocked and not visible_corners.has(corner):
-				visible_corners.append(corner)
+		var visible_corners = _pre_occlusion(psudo_camera)
+		mutex.lock()
+		var body: PhysicsBody3D = psudo_camera.get_parent()
+		mutex.unlock()
 		var parameters = PhysicsRayQueryParameters3D.new()
 		parameters.collision_mask = occlusion_mask
 		parameters.collide_with_areas = occlusion_by_areas
@@ -220,27 +256,35 @@ func _is_threshold_visible(index:int, psudo_camera: PsudoCamera, body: PhysicsBo
 			})
 			mutex.unlock()
 
-
 func _physics_process(delta: float) -> void:
 	if Engine.is_editor_hint() or (not enabled):
 		return
 	var current_detection: bool = false
 	var physics_space_state = get_world_3d().direct_space_state
-	mutex.lock()
-	for thread in _threads.keys():
+	if use_seperate_thread_for_occlusion:
+		mutex.lock()
 		semaphore.post()
-	mutex.unlock()
-	await get_tree().physics_frame
-	mutex.lock()
-	var pending_queries = physics_queries.duplicate()
-	physics_queries.clear()
-	mutex.unlock()
-	for query in pending_queries:
-		var result = physics_space_state.intersect_ray(query.parameters)
-		if result and result.collider_id == query.body_id:
-			current_detection = true
-			break
-	detected = current_detection
+		mutex.unlock()
+		await get_tree().physics_frame
+		mutex.lock()
+		var pending_queries = physics_queries.duplicate()
+		physics_queries.clear()
+		mutex.unlock()
+		for query in pending_queries:
+			var result = physics_space_state.intersect_ray(query.parameters)
+			if result and result.collider_id == query.body_id:
+				current_detection = true
+				break
+		detected = current_detection
+	else:
+		_generate_physics_queries(psudo_cameras_in_areas)
+		for query in physics_queries:
+			var result = physics_space_state.intersect_ray(query.parameters)
+			if result and result.collider_id == query.body_id:
+				current_detection = true
+				break
+		detected = current_detection
+		physics_queries.clear()
 
 func _on_entered(body:PhysicsBody3D, detection_area: Area3D) -> void:
 	if enabled:
@@ -252,13 +296,8 @@ func _on_entered(body:PhysicsBody3D, detection_area: Area3D) -> void:
 		if not psudo_camera:
 			return
 		var index = psudo_camera.get_instance_id()
-		psudo_cameras_in_areas[index] = psudo_camera
 		mutex.lock()
-		# If we have more psudo_cameras than threads, we need to add a new thread
-		var thread: EThread = EThread.new()
-		thread.thread = Thread.new()
-		_threads[index] = thread
-		_threads[index].thread.start(_is_threshold_visible.bind(index, psudo_camera, body))
+		psudo_cameras_in_areas.append(psudo_camera)
 		mutex.unlock()
 
 func _on_exited(body:PhysicsBody3D, detection_area: Area3D) -> void:
@@ -271,30 +310,18 @@ func _on_exited(body:PhysicsBody3D, detection_area: Area3D) -> void:
 		if not psudo_camera:
 			return
 		var index = psudo_camera.get_instance_id()
+		mutex.lock()
 		if psudo_cameras_in_areas.has(index):
 			psudo_cameras_in_areas.erase(index)
-		mutex.lock()
-		if _threads.has(index):
-			_threads[index].exiting = true
-			mutex.unlock()
-			semaphore.post()
-			_threads[index].thread.wait_to_finish()
-			mutex.lock()
-			_threads.erase(index)
-			print("threads left: ", _threads.size())
 		mutex.unlock()
 
 func _exit_tree() -> void:
 	if Engine.is_editor_hint() or not multiplayer.is_server():
 		return
-	mutex.lock()
-	for index in _threads.keys():
-		if _threads[index].thread.is_started():
-			_threads[index].exiting = true
-			mutex.unlock()
-			semaphore.post()
-			mutex.lock()
-			_threads[index].thread.wait_to_finish()
-			mutex.unlock()
-	_threads.clear()
+	if use_seperate_thread_for_occlusion:
+		mutex.lock()
+		thread.exiting = true
+		semaphore.post()
+		mutex.unlock()
+		thread.wait_to_finish()
 	psudo_cameras_in_areas.clear()
