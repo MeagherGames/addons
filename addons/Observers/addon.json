@@ -1,0 +1,11 @@
+{
+    "name": "Observers",
+    "isProject": true,
+    "description": "Adds Observers and ObserverationNotification Nodes, that will see and tell you when a physics body is seen within the frustum of the Observer",
+    "category": "Misc",
+    "godotVersion": "4.1",
+    "version": "1.0.0",
+    "icon": "Icon.png",
+    "dependencies": [],
+    "ignore": []
+}
