@@ -91,10 +91,19 @@ function Frame:from_cel(cel)
         o.region = {
             x = 0,
             y = 0,
-            w = 0,
-            h = 0
+            w = cel.image.width,
+            h = cel.image.height
         }
-        atlas:add_image(cel.image, o.region, cel.position.x, cel.position.y)
+        local use_atlas = true
+        for d in cel.layer.data:split(", ") do
+            if d:trim() == "no_atlas" then
+                use_atlas = false
+                break
+            end
+        end
+        if use_atlas then
+            atlas:add_image(cel.image, o.region, cel.position.x, cel.position.y)
+        end
     end
     return o
 end

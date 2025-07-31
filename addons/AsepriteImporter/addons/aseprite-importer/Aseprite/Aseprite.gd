@@ -133,6 +133,7 @@ static func _load_data(filepath: String, options: Dictionary = {}) -> Dictionary
 	var args = {
 		file_path = get_global_filepath(filepath),
 		output_path = output_path,
+		centered = options.get("centered", false),
 		layers = options.get("layers", false),
 		tiles = options.get("tiles", false),
 		pack_mode = options.get("pack_mode", null),

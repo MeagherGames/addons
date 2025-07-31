@@ -33,6 +33,11 @@ function Scene:add_from_layer(layer, group, atlas)
         -- The atlas for regular layers is handled by frames
         layer_data = Layer:from_layer(layer, group)
     end
+    if app.params["centered"] == "true" then
+        -- Center the layer by adjusting the offset
+        layer_data.offset.x = -app.sprite.width / 2
+        layer_data.offset.y = -app.sprite.height / 2
+    end
     table.insert(self.layers, layer_data)
 end
 

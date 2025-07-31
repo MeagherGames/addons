@@ -26,8 +26,20 @@ func _get_import_options(path: String, _preset: int) -> Array[Dictionary]:
 	var file_name = path.get_basename().get_file()
 	return [
 		{
-			"name": "export_tileset",
-			"default_value": true
+			"name": "use_canvas_group",
+			"default_value": true,
+		},
+		{
+			"name": "centered",
+			"default_value": true,
+		},
+		{
+			"name": "layers",
+			"default_value": false,
+		},
+		{
+			"name": "tiles",
+			"default_value": false
 		},
 		{
 			"name": "tile_set_path",
@@ -41,8 +53,6 @@ func _get_option_visibility(path: String, option_name: StringName, options: Dict
 	return true
 
 func _import(source_file, save_path, options, _platform_variants, _gen_files):
-	options.layers = true
-	options.tiles = true
 	# options.debug = true
 	var data = Aseprite.load_file(source_file, options)
 	var path = save_path + "." + _get_save_extension()
@@ -54,7 +64,13 @@ func _import(source_file, save_path, options, _platform_variants, _gen_files):
 
 	var root: Node2D
 	if data.layers.size() > 1:
-		root = Node2D.new()
+		if options.get("use_canvas_group", false):
+			root = CanvasGroup.new()
+			root.fit_margin = 0
+			root.clear_margin = 0
+		else:
+			root = Node2D.new()
+		
 		for layer in data.layers:
 			var layer_node = create_layer(layer, atlas_texture, data.tile_sets, options)
 			if options.get("groups", false):
@@ -78,7 +94,7 @@ func _import(source_file, save_path, options, _platform_variants, _gen_files):
 		animation.length = animation_data.duration
 
 		for layer in data.layers:
-			animate_layer(animation, layer, data.layers.size() > 1)
+			animate_layer(animation, animation_data, layer, data.layers.size() > 1)
 
 		animation_library.add_animation(animation_data.name, animation)
 		if animation_data.autoplay:
@@ -105,6 +121,17 @@ func get_layer_node_path(layer) -> String:
 		"name": layer.name
 	})
 
+func create_node_2d_layer(layer: Dictionary, options: Dictionary) -> Node2D:
+	var layer_node = Node2D.new()
+	layer_node.name = layer.name
+	layer_node.visible = layer.visible
+	layer_node.position = Vector2(
+		layer.offset.x + layer.frames[0].position.x,
+		layer.offset.y + layer.frames[0].position.y
+	)
+
+	return layer_node
+
 func create_sprite_layer(layer: Dictionary, atlas_texture: Texture, options: Dictionary) -> Node2D:
 	var layer_node = Sprite2D.new()
 	layer_node.name = layer.name
@@ -113,6 +140,7 @@ func create_sprite_layer(layer: Dictionary, atlas_texture: Texture, options: Dic
 	layer_node.texture = atlas_texture
 	layer_node.region_enabled = true
 	layer_node.region_filter_clip_enabled = true
+	layer_node.position = Vector2(layer.offset.x, layer.offset.y)
 	layer_node.region_rect = Rect2(
 		layer.frames[0].region.x,
 		layer.frames[0].region.y,
@@ -187,6 +215,7 @@ func create_tile_map_layer(layer: Dictionary, atlas_texture: Texture, tile_sets:
 	var layer_node: TileMapLayer = TileMapLayer.new()
 	layer_node.name = layer.name
 	layer_node.visible = layer.visible
+	layer_node.position = Vector2(layer.offset.x, layer.offset.y)
 
 	var tile_set: TileSet = null
 	var tile_set_path = options.get("tile_set_path", "")
@@ -264,6 +293,8 @@ func create_tile_map_layer(layer: Dictionary, atlas_texture: Texture, tile_sets:
 func create_layer(layer: Dictionary, texture: Texture, tile_sets: Array, options: Dictionary) -> Node2D:
 	if layer.is_tilemap:
 		return create_tile_map_layer(layer, texture, tile_sets, options)
+	elif layer.data.has("no_atlas"):
+		return create_node_2d_layer(layer, options)
 	else:
 		return create_sprite_layer(layer, texture, options)
 
@@ -284,8 +315,31 @@ func create_group_node(group: Array[String], layer_node: Node2D, root: Node) -> 
 		root.add_child(layer_node, true)
 		layer_node.owner = root
 
+func animate_node_2d_layer(animation: Animation, animation_data: Dictionary, layer_data: Dictionary, has_layers: bool = false) -> void:
+	var position_track = animation.add_track(Animation.TYPE_VALUE)
+	animation.value_track_set_update_mode(position_track, Animation.UPDATE_DISCRETE)
+	animation.track_set_interpolation_loop_wrap(position_track, false)
 
-func animate_sprite_layer(animation: Animation, layer_data: Dictionary, has_layers: bool = false) -> void:
+	var position_track_path = ".:position"
+	if has_layers:
+		position_track_path = "%s:position" % get_layer_node_path(layer_data)
+	
+	animation.track_set_path(position_track, position_track_path)
+
+	var timing = 0
+	var frames = layer_data.frames.slice(animation_data.from, animation_data.to + 1)
+	for frame in frames:
+		animation.track_insert_key(
+			position_track,
+			timing,
+			Vector2(
+				layer_data.offset.x + frame.position.x,
+				layer_data.offset.y + frame.position.y
+			)
+		)
+		timing += frame.duration
+
+func animate_sprite_layer(animation: Animation, animation_data: Dictionary, layer_data: Dictionary, has_layers: bool = false) -> void:
 	var region_frame_track = animation.add_track(Animation.TYPE_VALUE)
 	animation.value_track_set_update_mode(region_frame_track, Animation.UPDATE_DISCRETE)
 	animation.track_set_interpolation_loop_wrap(region_frame_track, false)
@@ -304,7 +358,8 @@ func animate_sprite_layer(animation: Animation, layer_data: Dictionary, has_laye
 	animation.track_set_path(offset_frame_track, offset_frame_track_path)
 
 	var timing = 0
-	for frame in layer_data.frames:
+	var frames = layer_data.frames.slice(animation_data.from, animation_data.to + 1)
+	for frame in frames:
 		animation.track_insert_key(
 			region_frame_track,
 			timing,
@@ -325,12 +380,14 @@ func animate_sprite_layer(animation: Animation, layer_data: Dictionary, has_laye
 		)
 		timing += frame.duration
 
-func animate_tile_map_layer(_animation: Animation, _layer_data: Dictionary, _has_layers: bool = false) -> void:
+func animate_tile_map_layer(_animation: Animation, _animation_data: Dictionary, _layer_data: Dictionary, _has_layers: bool = false) -> void:
 	# Tilemap animations are not implemented yet -- might never be implemented
 	pass
 
-func animate_layer(animation: Animation, layer_data: Dictionary, has_layers: bool = false) -> void:
+func animate_layer(animation: Animation, animation_data: Dictionary, layer_data: Dictionary, has_layers: bool = false) -> void:
 	if layer_data.is_tilemap:
-		animate_tile_map_layer(animation, layer_data, has_layers)
+		animate_tile_map_layer(animation, animation_data, layer_data, has_layers)
+	elif layer_data.data.has("no_atlas"):
+		animate_node_2d_layer(animation, animation_data, layer_data, has_layers)
 	else:
-		animate_sprite_layer(animation, layer_data, has_layers)
+		animate_sprite_layer(animation, animation_data, layer_data, has_layers)

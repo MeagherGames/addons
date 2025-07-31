@@ -23,6 +23,14 @@ if not sprite then
     return print "Could not find sprite " .. file_path .. " to export"
 end
 
+-- remove layers that have -noimp in their name
+for i = #sprite.layers, 1, -1 do
+    local layer = sprite.layers[i]
+    if layer.name:find("-noimp") then
+        sprite:deleteLayer(layer)
+    end
+end
+
 if app.params["layers"] ~= "true" then
     sprite:flatten()
 end

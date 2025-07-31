@@ -1,10 +1,14 @@
 local Frame = dofile("./frame.lua")
 local Layer = {
-    is_tilemap = false,
     name = "",
     group = "",
-    opacity = 1, -- Aseprite uses 0-255 for opacity, we use 0-1
     visible = true,
+    is_tilemap = false,
+    opacity = 1, -- Aseprite uses 0-255 for opacity, we use 0-1
+    offset = {
+        x = 0,
+        y = 0
+    },
     blend_mode = "normal", -- Aseprite blend modes are mapped to standard blend modes
     frames = {},
     data = {}
@@ -66,6 +70,7 @@ function Layer:to_json()
         visible = self.visible,
         blend_mode = self.blend_mode,
         is_tilemap = self.is_tilemap,
+        offset = self.offset,
         frames = {},
         data = self.data
     }
