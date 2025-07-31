@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://q46gd08tbhy3"
-path="res://.godot/imported/Threshold.svg-efaf1d5a04a07282a373b6728d79469a.ctex"
+uid="uid://igmiw8i1njkg"
+path="res://.godot/imported/Observer.svg-f748f65328c1a3add6914985ffca3985.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://addons/Thresholds/Threshold.svg"
-dest_files=["res://.godot/imported/Threshold.svg-efaf1d5a04a07282a373b6728d79469a.ctex"]
+source_file="res://addons/Observers/Observer.svg"
+dest_files=["res://.godot/imported/Observer.svg-f748f65328c1a3add6914985ffca3985.ctex"]
 
 [params]
 
