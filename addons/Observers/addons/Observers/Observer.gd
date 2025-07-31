@@ -4,13 +4,13 @@ class_name Observer extends Node3D
 @export var frustum_shape: FrustumShape = FrustumShape.new()
 @export var observable_group: String = "" # Group to which this observer belongs
 @export var real_camera: Camera3D
-@export var monitorable: bool = true: # Whether this camera can be monitored:
+@export var enabled: bool = true: # Whether this camera can be monitored:
 	set(value):
-		if monitorable == value:
+		if enabled == value:
 			return
 		if _area_3d:
 			_area_3d.monitorable = value
-		monitorable = value
+		enabled = value
 @export_group("Occlusion", "occlusion_")
 @export var occlusion_exclude_parent: bool = true
 @export_node_path("PhysicsBody3D") var occlusion_exclusions: Array[NodePath] = [] # Nodes to exclude from occlusion checks
@@ -49,7 +49,7 @@ func _setup() -> void:
 	_collision_shape.shape = frustum_shape
 	_area_3d.add_child(_collision_shape)
 	_area_3d.name = "FrustumArea"
-	_area_3d.monitorable = monitorable
+	_area_3d.monitorable = enabled
 	_area_3d.collision_layer = occlusion_layer
 	_area_3d.collision_mask = occlusion_mask
 	add_child(_area_3d,true)
