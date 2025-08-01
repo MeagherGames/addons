@@ -1,5 +1,14 @@
 class_name Observer extends Node3D
 
+enum OCCLUSION_MODE{
+	ANY_POINT = 0, # Any point must be visible for body to be considered visible
+	#ALL_POINTS = 1, # All points must be visible for body to be considered visible
+	ORIGIN = 2, # The origin of the body must be visible for it to be considered visible
+	RANDOM = 3, # A random point within the body must be visible for it to be considered visible
+}
+
+signal body_visible(body: PhysicsBody3D)
+signal body_hidden(body: PhysicsBody3D)
 
 @export var frustum_shape: FrustumShape = FrustumShape.new()
 @export var observable_group: String = "" # Group to which this observer belongs
@@ -12,24 +21,23 @@ class_name Observer extends Node3D
 			_area_3d.monitorable = value
 		enabled = value
 @export_group("Occlusion", "occlusion_")
+@export var occlusion_mode:OCCLUSION_MODE = OCCLUSION_MODE.ANY_POINT
 @export var occlusion_exclude_parent: bool = true
+@export var occlusion_check_frequency: int = 1 # How often to check for occlusion
 @export_node_path("PhysicsBody3D") var occlusion_exclusions: Array[NodePath] = [] # Nodes to exclude from occlusion checks
 var exclusions: Array[RID] = []# RIDs of excluded nodes for occlusion checks
-@export_flags_3d_physics var occlusion_layer:int = 1: # The occlusion layer for the camera
-	set(value):
-		occlusion_layer = value
-		if _area_3d:
-			_area_3d.collision_layer = value
 @export_flags_3d_physics var occlusion_mask:int = 1: # The occlusion mask for the camera
 	set(value):
 		occlusion_mask = value
 		if _area_3d:
+			_area_3d.collision_layer = value
 			_area_3d.collision_mask = value
 @export_group("Multiplayer", "multiplayer_")
 @export var multiplayer_client_can_set_camera: bool = true
 
 var _area_3d:Area3D = Area3D.new()
 var _collision_shape:CollisionShape3D = CollisionShape3D.new()
+var occlusion_check_counter: int = 0
 
 func _setup() -> void:
 	if real_camera and (not multiplayer.is_server() or multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
@@ -50,7 +58,7 @@ func _setup() -> void:
 	_area_3d.add_child(_collision_shape)
 	_area_3d.name = "FrustumArea"
 	_area_3d.monitorable = enabled
-	_area_3d.collision_layer = occlusion_layer
+	_area_3d.collision_layer = occlusion_mask
 	_area_3d.collision_mask = occlusion_mask
 	add_child(_area_3d,true)
 	if occlusion_exclude_parent and get_parent() is PhysicsBody3D:
@@ -73,3 +81,21 @@ func _update_server_camera(data:FrustumShape) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_READY:
 		_setup()
+
+func _notified_visible(body: PhysicsBody3D) -> void:
+	pass
+
+func _notified_hidden(body: PhysicsBody3D) -> void:
+	pass
+
+func notified_visible(body: PhysicsBody3D) -> void:
+	if not enabled:
+		return
+	_notified_visible(body)
+	body_visible.emit(body)
+
+func notified_hidden(body: PhysicsBody3D) -> void:
+	if not enabled:
+		return
+	_notified_hidden(body)
+	body_hidden.emit(body)
