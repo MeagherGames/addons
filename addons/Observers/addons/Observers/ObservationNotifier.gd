@@ -5,13 +5,6 @@ enum OBSERVER_NOTIFIER_MODE{
 	OBSERVATION = 2 # Observers when body is not occluded
 }
 
-enum OCCLUSION_MODE{
-	ANY_POINT = 0, # Any point must be visible for body to be considered visible
-	#ALL_POINTS = 1, # All points must be visible for body to be considered visible
-	ORIGIN = 2, # The origin of the body must be visible for it to be considered visible
-	RANDOM = 3, # A random point within the body must be visible for it to be considered visible
-}
-
 signal visible_to(observer: Observer)
 signal hidden_to(observer: Observer)
 @export var enabled: bool = true:
@@ -35,16 +28,11 @@ signal hidden_to(observer: Observer)
 	set(value):
 		occlusion_check_frequency = value
 		local_time_scale = float(occlusion_check_frequency)
-@export var occlusion_mode:OCCLUSION_MODE = OCCLUSION_MODE.ANY_POINT
 @export_flags_3d_physics var occlusion_layer:int = 1:
 	set(value):
 		occlusion_layer = value
 		if _area_3d:
 			_area_3d.collision_layer = value
-@export_flags_3d_physics var occlusion_mask:int = 1:
-	set(value):
-		occlusion_mask = value
-		if _area_3d:
 			_area_3d.collision_mask = value
 
 @export var minimum_visible_time:float = 0.0
@@ -70,7 +58,7 @@ func _initialize() -> void:
 
 func _setup() -> void:
 	_area_3d.collision_layer = occlusion_layer
-	_area_3d.collision_mask = occlusion_mask
+	_area_3d.collision_mask = occlusion_layer
 	_area_3d.area_entered.connect(_on_area_entered)
 	_area_3d.area_exited.connect(_on_area_exited)
 	print("minimum_visible_time:", minimum_visible_time)
@@ -83,18 +71,22 @@ func _check_visibility(delta: float) -> void:
 	var parameters = PhysicsRayQueryParameters3D.new()
 	parameters.collide_with_areas = false
 	parameters.collide_with_bodies = true
-	parameters.collision_mask = occlusion_mask
-	match occlusion_mode:
-		OCCLUSION_MODE.ANY_POINT:
-			var points = _get_shape_aabb(shape_type, shape_data, _body.global_transform)
-			for id in observers:
-				var observer: Observer = instance_from_id(id)
-				if observer:
-					var observer_exclusions = observer.exclusions.duplicate()
-					parameters.exclude = observer_exclusions
-					if not observer.observable_group.is_empty() and not is_in_group(observer.observable_group):
-						continue
-					parameters.from = observer.global_transform.origin
+	parameters.collision_mask = occlusion_layer
+	var points = _get_shape_aabb(shape_type, shape_data, _body.global_transform)
+	for id in observers:
+		var observer: Observer = instance_from_id(id)
+		if observer:
+			var observer_exclusions = observer.exclusions.duplicate()
+			parameters.exclude = observer_exclusions
+			if not observer.observable_group.is_empty() and not is_in_group(observer.observable_group):
+				continue
+			observer.occlusion_check_counter += 1
+			if observer.occlusion_check_counter < observer.occlusion_check_frequency:
+				continue
+			observer.occlusion_check_counter = 0
+			parameters.from = observer.global_transform.origin
+			match observer.occlusion_mode:
+				Observer.OCCLUSION_MODE.ANY_POINT:
 					var is_seen = false
 					for point in points:
 						parameters.to = point
@@ -105,6 +97,7 @@ func _check_visibility(delta: float) -> void:
 							if (not observers[id].visible) and observers[id].visible_time > minimum_visible_time:
 								observers[id].visible = true
 								visible_to.emit.call_deferred(observer)
+								observer.notified_visible(_body)
 							observers[id].hidden_time = 0
 							break
 					if not is_seen:
@@ -113,23 +106,17 @@ func _check_visibility(delta: float) -> void:
 							if observers[id].hidden_time > minimum_hidden_time:
 								observers[id].visible = false
 								hidden_to.emit.call_deferred(observer)
+								observer.notified_hidden(_body)
 						observers[id].hidden_time += delta
-		OCCLUSION_MODE.ORIGIN:
-			parameters.to = _body.global_transform.origin
-			for id in observers:
-				var observer: Observer = instance_from_id(id)
-				if observer:
-					var observer_exclusions = observer.exclusions.duplicate()
-					parameters.exclude = observer_exclusions
-					if not observer.observable_group.is_empty() and not is_in_group(observer.observable_group):
-						continue
-					parameters.from = observer.global_transform.origin
+				Observer.OCCLUSION_MODE.ORIGIN:
+					parameters.to = _body.global_transform.origin
 					var result = direct_space_state.intersect_ray(parameters)
 					if result and result.collider == _body:
 						observers[id].visible_time += delta
 						if (not observers[id].visible) and observers[id].visible_time > minimum_visible_time:
 							observers[id].visible = true
 							visible_to.emit.call_deferred(observer)
+							observer.notified_visible(_body)
 						observers[id].hidden_time = 0
 					else:
 						observers[id].visible_time = 0
@@ -137,25 +124,18 @@ func _check_visibility(delta: float) -> void:
 							if observers[id].hidden_time > minimum_hidden_time:
 								observers[id].visible = false
 								hidden_to.emit.call_deferred(observer)
+								observer.notified_hidden(_body)
 						observers[id].hidden_time += delta
-		OCCLUSION_MODE.RANDOM:
-			var points = _get_shape_aabb(shape_type, shape_data, _body.global_transform)
-			var random_point = _random_point_within_points(points)
-			parameters.to = random_point
-			for id in observers:
-				var observer: Observer = instance_from_id(id)
-				if observer:
-					var observer_exclusions = observer.exclusions.duplicate()
-					parameters.exclude = observer_exclusions
-					if not observer.observable_group.is_empty() and not is_in_group(observer.observable_group):
-						continue
-					parameters.from = observer.global_transform.origin
+				Observer.OCCLUSION_MODE.RANDOM:
+					var random_point = _random_point_within_points(points)
+					parameters.to = random_point
 					var result = direct_space_state.intersect_ray(parameters)
 					if result and result.collider == _body:
 						observers[id].visible_time += delta
 						if (not observers[id].visible) and observers[id].visible_time > minimum_visible_time:
 							observers[id].visible = true
 							visible_to.emit.call_deferred(observer)
+							observer.notified_visible(_body)
 						observers[id].hidden_time = 0
 					else:
 						observers[id].visible_time = 0
@@ -163,10 +143,12 @@ func _check_visibility(delta: float) -> void:
 							if observers[id].hidden_time > minimum_hidden_time:
 								observers[id].visible = false
 								hidden_to.emit.call_deferred(observer)
+								observer.notified_hidden(_body)
 						observers[id].hidden_time += delta
 
 func _get_shape_aabb(shape_type:PhysicsServer3D.ShapeType,shape_data:Variant, trans: Transform3D) -> PackedVector3Array:
 	var points: PackedVector3Array = PackedVector3Array()
+	var sqrt_3 = sqrt(3.0)
 	match shape_type:
 		PhysicsServer3D.SHAPE_CONVEX_POLYGON:
 			var least_x:float = 1.79769e308
@@ -208,7 +190,7 @@ func _get_shape_aabb(shape_type:PhysicsServer3D.ShapeType,shape_data:Variant, tr
 		PhysicsServer3D.SHAPE_SPHERE:
 			#this gets an aabb within the sphere
 			# to get one that contains the sphere, we can use just the radius
-			var r = shape_data / sqrt(3.0)  # Adjust radius for sphere
+			var r = shape_data / sqrt_3  # Adjust radius for sphere
 			points.append_array([
 				trans.origin + trans.basis * Vector3(-r, -r, -r),
 				trans.origin + trans.basis * Vector3(-r, -r, r),
@@ -220,17 +202,24 @@ func _get_shape_aabb(shape_type:PhysicsServer3D.ShapeType,shape_data:Variant, tr
 				trans.origin + trans.basis * Vector3(r, r, r),
 			])
 		PhysicsServer3D.SHAPE_CAPSULE,PhysicsServer3D.SHAPE_CYLINDER:
-			var height = shape_data.height * 0.5
+			var h = shape_data.height * 0.5
 			var radius = shape_data.radius
+			# For AABB within capsule: Y is constrained by cylindrical portion, X/Z by circular cross-section
+			var y_extent:float
+			if shape_type == PhysicsServer3D.SHAPE_CAPSULE:
+				y_extent = h - radius  # Height minus the spherical caps
+			else:
+				y_extent = h  # Cylinder has no spherical caps, so full height is used
+			var xz_extent = radius / sqrt(2.0)  # Largest square that fits in circle
 			points.append_array([
-				trans.origin + trans.basis * Vector3(radius, height, 0),
-				trans.origin + trans.basis * Vector3(-radius, height, 0),
-				trans.origin + trans.basis * Vector3(0, height, radius),
-				trans.origin + trans.basis * Vector3(0, height, -radius),
-				trans.origin + trans.basis * Vector3(radius, -height, 0),
-				trans.origin + trans.basis * Vector3(-radius, -height, 0),
-				trans.origin + trans.basis * Vector3(0, -height, radius),
-				trans.origin + trans.basis * Vector3(0, -height, -radius)
+				trans.origin + trans.basis * Vector3(-xz_extent, -y_extent, -xz_extent),
+				trans.origin + trans.basis * Vector3(-xz_extent, -y_extent, xz_extent),
+				trans.origin + trans.basis * Vector3(-xz_extent, y_extent, -xz_extent),
+				trans.origin + trans.basis * Vector3(-xz_extent, y_extent, xz_extent),
+				trans.origin + trans.basis * Vector3(xz_extent, -y_extent, -xz_extent),
+				trans.origin + trans.basis * Vector3(xz_extent, -y_extent, xz_extent),
+				trans.origin + trans.basis * Vector3(xz_extent, y_extent, -xz_extent),
+				trans.origin + trans.basis * Vector3(xz_extent, y_extent, xz_extent),
 			])
 		_:
 			# For other shapes, we can return an empty array or handle them as needed
@@ -259,25 +248,36 @@ func _on_area_entered(area: Area3D) -> void:
 		return
 	var area_parent = area.get_parent()
 	if area_parent is Observer:
-		if mode == OBSERVER_NOTIFIER_MODE.OBSERVATION:
-			visible_to.emit.call_deferred(area_parent)
+		if observers.has(area_parent.get_instance_id()):
+			if not observers[area_parent.get_instance_id()].visible:
+				# If the observer is already visible, we don't need to do anything
+				return
+			observers[area_parent.get_instance_id()]["visible"] = true
+			observers[area_parent.get_instance_id()]["visible_time"] = 0.0
+			observers[area_parent.get_instance_id()]["hidden_time"] = 0.0
 		else:
-			observers[area_parent.get_instance_id()] = {
-				"visible": false,
-				"visible_time": 0.0,
-				"hidden_time": 0.0,
-			}
+			if mode == OBSERVER_NOTIFIER_MODE.OBSERVATION:
+				visible_to.emit.call_deferred(area_parent)
+				area_parent.notified_visible(_body)
+			else:
+				observers[area_parent.get_instance_id()] = {
+					"visible": false,
+					"visible_time": 0.0,
+					"hidden_time": 0.0,
+				}
 
 func _on_area_exited(area: Area3D) -> void:
 	var area_parent = area.get_parent()
 	if area_parent is Observer:
 		if mode == OBSERVER_NOTIFIER_MODE.OBSERVATION:
 			hidden_to.emit.call_deferred(area_parent)
+			area_parent.notified_hidden(_body)
 		else:
 			if observers.has(area_parent.get_instance_id()):
 				if observers[area_parent.get_instance_id()].visible:
 					observers.erase(area_parent.get_instance_id())
 					hidden_to.emit.call_deferred(area_parent)
+					area_parent.notified_hidden(_body)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_READY:
