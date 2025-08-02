@@ -16,19 +16,19 @@ const SpriteShader = preload("res://addons/directional_sprite_3d/directional_spr
     set(value):
         regions_enabled = value
         _update_regions()
-@export var front_region:Vector4 = Vector4(0,0,0,0.25) :
+@export var front_region:Vector4i = Vector4i(0,0,0,0) :
     set(value):
         front_region = value
         _update_regions()
-@export var left_region:Vector4 = Vector4(0,0.25,0,0.5) :
+@export var left_region:Vector4i = Vector4i(0,0,0,0) :
     set(value):
         left_region = value
         _update_regions()
-@export var right_region:Vector4 = Vector4(0,0.5,0,0.75) :
+@export var right_region:Vector4i = Vector4i(0,0,0,0) :
     set(value):
         right_region = value
         _update_regions()
-@export var back_region:Vector4 = Vector4(0,0.75,0,1) :
+@export var back_region:Vector4i = Vector4i(0,0,0,0) :
     set(value):
         back_region = value
         _update_regions()
@@ -177,32 +177,41 @@ func generate_mesh() -> void:
     RenderingServer.material_set_param(material, "alpha_scissor_threshold", alpha_scissor_threshold)
     _update_regions()
 
+func _get_region_uv(frame_size:Vector2,texture_size:Vector2,region:Vector4i) -> Vector4:
+    if not texture:
+        return Vector4.ZERO
+    
+    # Calculate the actual region position with frame offset
+    var actual_x = frame_size.x * frame + region.x
+    var actual_y = region.y
+    
+    # Convert to UV coordinates (0-1 range)
+    return Vector4(
+        actual_x / texture_size.x,                    # min_x
+        actual_y / texture_size.y,                    # min_y
+        (actual_x + region.z) / texture_size.x,       # max_x
+        (actual_y + region.w) / texture_size.y        # max_y
+    )
+
 func _update_regions():
     if not texture:
         return
-
+    var texture_size:Vector2 = texture.get_size()
     if regions_enabled:
-        RenderingServer.material_set_param(material, "front_region", front_region)
-        RenderingServer.material_set_param(material, "left_region", left_region)
-        RenderingServer.material_set_param(material, "right_region", right_region)
-        RenderingServer.material_set_param(material, "back_region", back_region)
+        RenderingServer.material_set_param(material, "front_region", _get_region_uv(frame_size,texture_size, front_region))
+        RenderingServer.material_set_param(material, "left_region", _get_region_uv(frame_size,texture_size, left_region))
+        RenderingServer.material_set_param(material, "right_region", _get_region_uv(frame_size,texture_size, right_region))
+        RenderingServer.material_set_param(material, "back_region", _get_region_uv(frame_size,texture_size, back_region))
     else:
         # We're just going to expect that directional angles are split vertically
         # while animation frames are always split horizontally
-        var texture_size:Vector2 = texture.get_size()
-        var frame_offset:Vector2 = Vector2(frame_size.x * frame, 0) / texture_size
-        var region_size:Vector2 = frame_size / texture_size
-
+        
         var regions = ["front_region", "left_region", "right_region", "back_region"]
         for i in regions.size():
-            var region_offset =  frame_offset + (Vector2(0, frame_size.y * i)  / texture_size)
-            var region:Vector4 = Vector4(
-                region_offset.x,
-                region_offset.y,
-                region_offset.x + region_size.x,
-                region_offset.y + region_size.y
-            )
-            RenderingServer.material_set_param(material, regions[i], region)
+            # Create a region for this direction (x=0, y=frame_size.y*i, width=frame_size.x, height=frame_size.y)
+            var direction_region = Vector4i(0, int(frame_size.y * i), int(frame_size.x), int(frame_size.y))
+            var region_uv = _get_region_uv(frame_size, texture_size, direction_region)
+            RenderingServer.material_set_param(material, regions[i], region_uv)
 
 
 func set_texture(value:Texture2D) -> void:
