@@ -40,10 +40,11 @@ const SpriteShader = preload("res://addons/directional_sprite_3d/directional_spr
 @export_range(0.0, 1.0) var specular:float = 0.5 : set = set_specular
 @export_range(0.0, 1.0) var metallic:float = 0.0 : set = set_metallic
 @export_range(0.0, 1.0) var roughness:float = 1.0 : set = set_roughness
-@export_enum("billboard", "billboard_y") var billboard_mode:int = 0 : set = set_billboard_mode
 @export_enum("cardinal", "diagonal") var side_mode:int = 0 : set = set_side_mode
 @export var cast_shadow:RenderingServer.ShadowCastingSetting = RenderingServer.SHADOW_CASTING_SETTING_ON : set = set_cast_shadow
+@export_enum("billboard", "billboard_y") var billboard_mode:int = 0 : set = set_billboard_mode
 
+var billboard_tilt_factor:float = 0.0 : set = set_billboard_tilt_factor
 var instance:RID
 var mesh:RID
 var material:RID
@@ -91,7 +92,9 @@ func _notification(what):
             RenderingServer.instance_set_scenario(instance, get_world_3d().get_scenario())
             _update_visibility()
         NOTIFICATION_TRANSFORM_CHANGED:
+            print("Transform scale: ", get_global_transform().basis.get_scale())
             RenderingServer.instance_set_transform(instance, get_global_transform())
+            _queue_draw()
         NOTIFICATION_EXIT_WORLD:
             RenderingServer.instance_set_scenario(instance, RID())
         NOTIFICATION_VISIBILITY_CHANGED:
@@ -100,7 +103,13 @@ func _notification(what):
             RenderingServer.free_rid(instance)
             RenderingServer.free_rid(mesh)
             RenderingServer.free_rid(material)
-        
+
+func _get_property_list() -> Array[Dictionary]:
+    if billboard_mode == 1:
+        return [
+            {"name": "billboard_tilt_factor", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT, "hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01"}
+        ]
+    return []
 
 func get_item_rect() -> Rect2:
     if not texture:
@@ -108,7 +117,6 @@ func get_item_rect() -> Rect2:
 
     @warning_ignore("shadowed_variable")
     var offset:Vector2 = self.offset
-    
     var size = frame_size
 
     if is_centered:
@@ -130,7 +138,7 @@ func generate_mesh() -> void:
     var rect:Rect2 = get_item_rect()
     var aabb:AABB = AABB()
     var pixel_size = 1.0 / pixels_per_meter
-
+    
     var vertices:PackedVector3Array = [
         Vector3(rect.position.x, rect.position.y, 0) * pixel_size,
         Vector3(rect.position.x + rect.size.x, rect.position.y, 0) * pixel_size,
@@ -276,6 +284,7 @@ func set_roughness(value:float) -> void:
 func set_billboard_mode(value:int) -> void:
     billboard_mode = value
     RenderingServer.material_set_param(material, "billboard_y", billboard_mode == 1)
+    notify_property_list_changed()
 
 func set_side_mode(value:int) -> void:
     side_mode = value
@@ -284,3 +293,7 @@ func set_side_mode(value:int) -> void:
 func set_cast_shadow(value:RenderingServer.ShadowCastingSetting) -> void:
     cast_shadow = value
     RenderingServer.instance_geometry_set_cast_shadows_setting(instance, cast_shadow)
+
+func set_billboard_tilt_factor(value:float) -> void:
+    billboard_tilt_factor = value
+    RenderingServer.material_set_param(material, "tilt_factor", billboard_tilt_factor)
