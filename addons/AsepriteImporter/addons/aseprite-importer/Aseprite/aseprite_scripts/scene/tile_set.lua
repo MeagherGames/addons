@@ -44,7 +44,8 @@ function TileSet:generate_image(tileset)
     local spec = ImageSpec {
         width = w + self.padding * (hframes - 1),
         height = h + self.padding * (vframes - 1),
-        colorMode = app.sprite.colorMode
+        colorMode = app.sprite.colorMode,
+        transparentColor = app.sprite.transparentColor
     }
     local image = Image(spec)
 

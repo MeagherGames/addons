@@ -86,7 +86,8 @@ function Atlas:pack_grid(grid_width)
     local spec = ImageSpec {
         width = self.width,
         height = self.height,
-        colorMode = app.sprite.colorMode
+        colorMode = app.sprite.colorMode,
+        transparentColor = app.sprite.transparentColor
     }
     local atlas_image = Image(spec)
 
@@ -135,7 +136,8 @@ function Atlas:pack_scan()
     local spec = ImageSpec {
         width = atlas_width,
         height = atlas_height,
-        colorMode = app.sprite.colorMode
+        colorMode = app.sprite.colorMode,
+        transparentColor = app.sprite.transparentColor
     }
     local atlas_image = Image(spec)
 
