@@ -92,7 +92,6 @@ func _notification(what):
             RenderingServer.instance_set_scenario(instance, get_world_3d().get_scenario())
             _update_visibility()
         NOTIFICATION_TRANSFORM_CHANGED:
-            print("Transform scale: ", get_global_transform().basis.get_scale())
             RenderingServer.instance_set_transform(instance, get_global_transform())
             _queue_draw()
         NOTIFICATION_EXIT_WORLD:
