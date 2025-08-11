@@ -14,6 +14,22 @@ Animation.LOOP_NONE = 0
 Animation.LOOP_LINEAR = 1
 Animation.LOOP_PINGPONG = 2
 
+function Animation:empty()
+    local o = {}
+    setmetatable(o, self)
+    self.__index = self
+    o.name = "RESET"
+    o.from = 0
+    o.to = #app.sprite.cels - 1
+    o.duration = 0
+    o.autoplay = false
+    o.repeats = 0
+    o.loop_mode = Animation.LOOP_LINEAR
+    o.reverse = false
+    o.data = {}
+    return o
+end
+
 function Animation:from_tag(tag)
     local o = {}
     setmetatable(o, self)

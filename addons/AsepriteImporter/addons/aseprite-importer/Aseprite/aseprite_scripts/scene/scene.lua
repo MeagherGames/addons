@@ -74,19 +74,7 @@ function Scene:from_sprite()
     -- Add animations
     o.animations = {}
     if #app.sprite.tags == 0 then
-        local animation_data = Animation:from_tag({
-            name = "RESET",
-            fromFrame = {
-                frameNumber = 1
-            },
-            toFrame = {
-                frameNumber = #app.sprite.cels
-            },
-            sprite = app.sprite,
-            repeats = 0,
-            loop = AniDir.FORWARD,
-            data = ""
-        })
+        local animation_data = Animation:empty()
         table.insert(o.animations, animation_data)
     else
         for i, tag in ipairs(app.sprite.tags) do
