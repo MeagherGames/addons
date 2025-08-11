@@ -16,6 +16,7 @@ uniform float roughness = 1.0;
 uniform float alpha_scissor_threshold = 0.5;
 
 uniform bool billboard_y = false;
+uniform float tilt_factor: hint_range(0.0, 1.0) = 0.0;
 uniform bool cardinal_sides = true;
 
 varying flat int closest_side;
@@ -95,9 +96,24 @@ void vertex(){
 	MODELVIEW_NORMAL_MATRIX = mat3(MODELVIEW_MATRIX);
 	
 	if (billboard_y) {
-		MODELVIEW_MATRIX = VIEW_MATRIX * mat4(vec4(normalize(cross(vec3(0.0, 1.0, 0.0), INV_VIEW_MATRIX[2].xyz)), 0.0), vec4(0.0, 1.0, 0.0, 0.0), vec4(normalize(cross(INV_VIEW_MATRIX[0].xyz, vec3(0.0, 1.0, 0.0))), 0.0), MODEL_MATRIX[3]);
+		vec3 scale = vec3(length(MODEL_MATRIX[0].xyz), length(MODEL_MATRIX[1].xyz), length(MODEL_MATRIX[2].xyz));
+		vec3 cam_dir = normalize(INV_VIEW_MATRIX[2].xyz);
+		float vertical_angle_factor = abs(cam_dir.y);
+		float tilt_amount = vertical_angle_factor * tilt_factor;
+		vec3 right_vec = normalize(cross(vec3(0.0, 1.0, 0.0), cam_dir));
+		vec3 camera_up = normalize(cross(cam_dir, right_vec));
+		vec3 up_vec = mix(vec3(0.0, 1.0, 0.0), camera_up, tilt_amount);
+		vec3 forward_vec = normalize(cross(right_vec, up_vec));
+		MODELVIEW_MATRIX = VIEW_MATRIX * mat4(
+			vec4(right_vec * scale.x, 0.0),
+		 	vec4(up_vec * scale.y, 0.0),
+		 	vec4(forward_vec * scale.z, 0.0), MODEL_MATRIX[3]);
 	} else {
-		MODELVIEW_MATRIX = MODELVIEW_MATRIX * mat4(vec4(length(MODEL_MATRIX[0].xyz), 0.0, 0.0, 0.0),vec4(0.0, 1.0, 0.0, 0.0),vec4(0.0, 0.0, length(MODEL_MATRIX[2].xyz), 0.0), vec4(0.0, 0.0, 0.0, 1.0));	
+		MODELVIEW_MATRIX = MODELVIEW_MATRIX * mat4(
+			vec4(length(MODEL_MATRIX[0].xyz), 0.0, 0.0, 0.0),
+			vec4(0.0, length(MODEL_MATRIX[1].xyz), 0.0, 0.0),
+			vec4(0.0, 0.0, length(MODEL_MATRIX[2].xyz), 0.0),
+			vec4(0.0, 0.0, 0.0, 1.0));
 	}
 	
 	VERTEX = (MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;

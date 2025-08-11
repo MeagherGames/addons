@@ -16,19 +16,19 @@ const SpriteShader = preload("res://addons/directional_sprite_3d/directional_spr
     set(value):
         regions_enabled = value
         _update_regions()
-@export var front_region:Vector4 = Vector4(0,0,0,0.25) :
+@export var front_region:Vector4i = Vector4i(0,0,0,0) :
     set(value):
         front_region = value
         _update_regions()
-@export var left_region:Vector4 = Vector4(0,0.25,0,0.5) :
+@export var left_region:Vector4i = Vector4i(0,0,0,0) :
     set(value):
         left_region = value
         _update_regions()
-@export var right_region:Vector4 = Vector4(0,0.5,0,0.75) :
+@export var right_region:Vector4i = Vector4i(0,0,0,0) :
     set(value):
         right_region = value
         _update_regions()
-@export var back_region:Vector4 = Vector4(0,0.75,0,1) :
+@export var back_region:Vector4i = Vector4i(0,0,0,0) :
     set(value):
         back_region = value
         _update_regions()
@@ -40,10 +40,11 @@ const SpriteShader = preload("res://addons/directional_sprite_3d/directional_spr
 @export_range(0.0, 1.0) var specular:float = 0.5 : set = set_specular
 @export_range(0.0, 1.0) var metallic:float = 0.0 : set = set_metallic
 @export_range(0.0, 1.0) var roughness:float = 1.0 : set = set_roughness
-@export_enum("billboard", "billboard_y") var billboard_mode:int = 0 : set = set_billboard_mode
 @export_enum("cardinal", "diagonal") var side_mode:int = 0 : set = set_side_mode
 @export var cast_shadow:RenderingServer.ShadowCastingSetting = RenderingServer.SHADOW_CASTING_SETTING_ON : set = set_cast_shadow
+@export_enum("billboard", "billboard_y") var billboard_mode:int = 0 : set = set_billboard_mode
 
+var billboard_tilt_factor:float = 0.0 : set = set_billboard_tilt_factor
 var instance:RID
 var mesh:RID
 var material:RID
@@ -92,6 +93,7 @@ func _notification(what):
             _update_visibility()
         NOTIFICATION_TRANSFORM_CHANGED:
             RenderingServer.instance_set_transform(instance, get_global_transform())
+            _queue_draw()
         NOTIFICATION_EXIT_WORLD:
             RenderingServer.instance_set_scenario(instance, RID())
         NOTIFICATION_VISIBILITY_CHANGED:
@@ -100,7 +102,13 @@ func _notification(what):
             RenderingServer.free_rid(instance)
             RenderingServer.free_rid(mesh)
             RenderingServer.free_rid(material)
-        
+
+func _get_property_list() -> Array[Dictionary]:
+    if billboard_mode == 1:
+        return [
+            {"name": "billboard_tilt_factor", "type": TYPE_FLOAT, "usage": PROPERTY_USAGE_DEFAULT, "hint": PROPERTY_HINT_RANGE, "hint_string": "0.0,1.0,0.01"}
+        ]
+    return []
 
 func get_item_rect() -> Rect2:
     if not texture:
@@ -108,7 +116,6 @@ func get_item_rect() -> Rect2:
 
     @warning_ignore("shadowed_variable")
     var offset:Vector2 = self.offset
-    
     var size = frame_size
 
     if is_centered:
@@ -130,7 +137,7 @@ func generate_mesh() -> void:
     var rect:Rect2 = get_item_rect()
     var aabb:AABB = AABB()
     var pixel_size = 1.0 / pixels_per_meter
-
+    
     var vertices:PackedVector3Array = [
         Vector3(rect.position.x, rect.position.y, 0) * pixel_size,
         Vector3(rect.position.x + rect.size.x, rect.position.y, 0) * pixel_size,
@@ -177,32 +184,41 @@ func generate_mesh() -> void:
     RenderingServer.material_set_param(material, "alpha_scissor_threshold", alpha_scissor_threshold)
     _update_regions()
 
+func _get_region_uv(frame_size:Vector2,texture_size:Vector2,region:Vector4i) -> Vector4:
+    if not texture:
+        return Vector4.ZERO
+    
+    # Calculate the actual region position with frame offset
+    var actual_x = frame_size.x * frame + region.x
+    var actual_y = region.y
+    
+    # Convert to UV coordinates (0-1 range)
+    return Vector4(
+        actual_x / texture_size.x,                    # min_x
+        actual_y / texture_size.y,                    # min_y
+        (actual_x + region.z) / texture_size.x,       # max_x
+        (actual_y + region.w) / texture_size.y        # max_y
+    )
+
 func _update_regions():
     if not texture:
         return
-
+    var texture_size:Vector2 = texture.get_size()
     if regions_enabled:
-        RenderingServer.material_set_param(material, "front_region", front_region)
-        RenderingServer.material_set_param(material, "left_region", left_region)
-        RenderingServer.material_set_param(material, "right_region", right_region)
-        RenderingServer.material_set_param(material, "back_region", back_region)
+        RenderingServer.material_set_param(material, "front_region", _get_region_uv(frame_size,texture_size, front_region))
+        RenderingServer.material_set_param(material, "left_region", _get_region_uv(frame_size,texture_size, left_region))
+        RenderingServer.material_set_param(material, "right_region", _get_region_uv(frame_size,texture_size, right_region))
+        RenderingServer.material_set_param(material, "back_region", _get_region_uv(frame_size,texture_size, back_region))
     else:
         # We're just going to expect that directional angles are split vertically
         # while animation frames are always split horizontally
-        var texture_size:Vector2 = texture.get_size()
-        var frame_offset:Vector2 = Vector2(frame_size.x * frame, 0) / texture_size
-        var region_size:Vector2 = frame_size / texture_size
-
+        
         var regions = ["front_region", "left_region", "right_region", "back_region"]
         for i in regions.size():
-            var region_offset =  frame_offset + (Vector2(0, frame_size.y * i)  / texture_size)
-            var region:Vector4 = Vector4(
-                region_offset.x,
-                region_offset.y,
-                region_offset.x + region_size.x,
-                region_offset.y + region_size.y
-            )
-            RenderingServer.material_set_param(material, regions[i], region)
+            # Create a region for this direction (x=0, y=frame_size.y*i, width=frame_size.x, height=frame_size.y)
+            var direction_region = Vector4i(0, int(frame_size.y * i), int(frame_size.x), int(frame_size.y))
+            var region_uv = _get_region_uv(frame_size, texture_size, direction_region)
+            RenderingServer.material_set_param(material, regions[i], region_uv)
 
 
 func set_texture(value:Texture2D) -> void:
@@ -267,6 +283,7 @@ func set_roughness(value:float) -> void:
 func set_billboard_mode(value:int) -> void:
     billboard_mode = value
     RenderingServer.material_set_param(material, "billboard_y", billboard_mode == 1)
+    notify_property_list_changed()
 
 func set_side_mode(value:int) -> void:
     side_mode = value
@@ -275,3 +292,7 @@ func set_side_mode(value:int) -> void:
 func set_cast_shadow(value:RenderingServer.ShadowCastingSetting) -> void:
     cast_shadow = value
     RenderingServer.instance_geometry_set_cast_shadows_setting(instance, cast_shadow)
+
+func set_billboard_tilt_factor(value:float) -> void:
+    billboard_tilt_factor = value
+    RenderingServer.material_set_param(material, "tilt_factor", billboard_tilt_factor)
