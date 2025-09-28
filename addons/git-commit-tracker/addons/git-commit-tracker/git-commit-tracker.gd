@@ -20,5 +20,5 @@ func _exit_tree():
 	display.queue_free()
 
 func _refresh():
-	var commits = Git.get_commits()
-	display.set_commits(commits)
+	var commit_data: Dictionary = Git.get_commit_data()
+	display.set_commit_data(commit_data)

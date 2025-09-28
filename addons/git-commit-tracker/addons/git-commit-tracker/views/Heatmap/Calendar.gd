@@ -4,11 +4,163 @@ extends RichTextLabel
 # ascii dots for if you have committed on that day
 # small white dot for no commits
 const EMOJIS = {
-	false: "•",
-	true: "🔸"
+	no_commit = "•",
+	has_commit = "🔸",
+	streak = "[color=orange]🔥[/color]",
+	top_streak = "[wave][color=red]❤️‍🔥[/color][/wave]"
 }
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-var week_data: Dictionary = {}
+
+class CalendarDay extends RefCounted:
+	var date: Dictionary
+	var timestamp: int = -1
+	var commits: Array[Dictionary] = []
+	var messages: Array = []
+	var is_streak: bool = false
+	var is_largest_streak: bool = false
+
+	func _init(date: Dictionary) -> void:
+		self.date = date
+		self.timestamp = Time.get_unix_time_from_datetime_dict(date)
+
+	func add_commit(commit: Dictionary) -> void:
+		commits.append(commit)
+		messages.append(
+			"[%s] %s: %s" % [
+				Time.get_datetime_string_from_datetime_dict(commit.date, true),
+				commit.author,
+				commit.message
+			]
+		)
+
+class CalendarWeek extends RefCounted:
+	var date: Dictionary
+	var days: Array[CalendarDay] = []
+	var first_week_of_the_month: bool = false
+	var month_name: String = ""
+
+	func _init(date: Dictionary) -> void:
+		self.date = date
+		for i in range(7):
+			var timestamp = Time.get_unix_time_from_datetime_dict(date) + i * 86400
+			var day_date = Time.get_date_dict_from_unix_time(timestamp)
+			if day_date.day == 1:
+				first_week_of_the_month = true
+				month_name = MONTHS[day_date.month - 1]
+			days.append(CalendarDay.new(day_date))
+
+	func add_commit(commit: Dictionary) -> void:
+		var weekday = commit.date.weekday
+		var day: CalendarDay = days[weekday]
+		day.add_commit(commit)
+
+class CalendarData extends RefCounted:
+	var weeks: Array[CalendarWeek] = []
+
+	func _init(first_date: Dictionary = {}, last_date: Dictionary = {}) -> void:
+		if not first_date.is_empty() and not last_date.is_empty():
+			# fill weeks between first_date and last_date
+			var end_week = get_week_of_year(last_date)
+			var current_week = get_week_of_year(first_date)
+			var current_timestamp = Time.get_unix_time_from_datetime_dict(first_date) - first_date.weekday * 86400
+			var current_date = Time.get_date_dict_from_unix_time(current_timestamp)
+			while current_week.year <= end_week.year and current_week.week <= end_week.week:
+				var week = CalendarWeek.new(current_date.duplicate())
+				weeks.append(week)
+				var timestamp = Time.get_unix_time_from_datetime_dict(current_date) + 7 * 86400
+				current_date = Time.get_date_dict_from_unix_time(timestamp)
+
+				current_week = get_week_of_year(current_date)
+
+	func add_commit(commit: Dictionary) -> void:
+		var week_of_year = get_week_of_year(commit.date)
+		# find or create the week, place the week in the correct order
+		var week: CalendarWeek = null
+		for w in weeks:
+			var other_week_of_year = get_week_of_year(w.date)
+			if week_of_year.week == other_week_of_year.week and week_of_year.year == other_week_of_year.year:
+				week = w
+				break
+		if week == null:
+			var start_of_week = Time.get_date_dict_from_unix_time(
+				Time.get_unix_time_from_datetime_dict(commit.date) - commit.date.weekday * 86400
+			)
+			week = CalendarWeek.new(start_of_week)
+			weeks.append(week)
+		week.add_commit(commit)
+
+	func sort() -> void:
+		weeks.sort_custom(_sort_weeks)
+
+	func _sort_weeks(week_a: CalendarWeek, week_b: CalendarWeek) -> bool:
+		var a = get_week_of_year(week_a.date)
+		var b = get_week_of_year(week_b.date)
+		if a.year == b.year:
+			return a.week < b.week
+		return a.year < b.year
+	
+	static func get_week_of_year(datetime: Dictionary) -> Dictionary[String, int]:
+		var DAYS_IN_MONTHS = get_days_in_months(datetime.year)
+		var start_day_of_year = get_start_day_of_year(datetime.year)
+		var day_of_year = datetime.day
+		for i in range(datetime.month - 1):
+			day_of_year += DAYS_IN_MONTHS[i]
+		var week_of_year = ceil((day_of_year + start_day_of_year) / 7.0)
+		var year = datetime.year
+		if week_of_year > 52:
+			week_of_year = 1
+			year += 1
+		return {
+			"week": week_of_year,
+			"month": datetime.month,
+			"year": year
+		}
+	
+	static func is_leap_year(year: int) -> bool:
+		return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
+
+	static func get_days_in_months(year: int) -> Array:
+		var DAYS_IN_MONTHS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+		if is_leap_year(year):
+			DAYS_IN_MONTHS[1] = 29
+		return DAYS_IN_MONTHS
+
+	static func get_start_day_of_year(year: int) -> int:
+		# Zeller's Congruence algorithm to find the day of the week for January 1st
+		var q = 1
+		var m = 13 # January is treated as the 13th month of the previous year
+		var K = (year - 1) % 100
+		var J = (year - 1) / 100
+		var h = (q + int((13 * (m + 1)) / 5) + K + int(K / 4) + int(J / 4) - 2 * J) % 7
+		return ((h + 5) % 7) + 1 # Adjust to make Sunday = 0, Monday = 1, ..., Saturday = 6
+
+class CalendarDayIterator extends RefCounted:
+	var data: CalendarData
+	var week_index: int = 0
+	var day_index: int = 0
+
+	func _init(data: CalendarData) -> void:
+		self.data = data
+
+	func should_continue() -> bool:
+		return week_index < data.weeks.size()
+
+	func _iter_init(_iter):
+		week_index = 0
+		day_index = 0
+		return should_continue()
+	
+	func _iter_next(_iter):
+		day_index += 1
+		if day_index >= 7:
+			day_index = 0
+			week_index += 1
+		return should_continue()
+	
+	func _iter_get(_iter):
+		return data.weeks[week_index].days[day_index]
+
+var data: CalendarData = null
 
 func _sum(arr: Array[float]) -> float:
 	var sum = 0
@@ -16,143 +168,52 @@ func _sum(arr: Array[float]) -> float:
 		sum += i
 	return sum
 
-func _is_leap_year(year: int) -> bool:
-	return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
-
-func _get_days_in_months(year: int) -> Array:
-	var DAYS_IN_MONTHS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-	if _is_leap_year(year):
-		DAYS_IN_MONTHS[1] = 29
-	return DAYS_IN_MONTHS
-
-func _get_start_day_of_year(year: int) -> int:
-	# Zeller's Congruence algorithm to find the day of the week for January 1st
-	var q = 1
-	var m = 13 # January is treated as the 13th month of the previous year
-	var K = (year - 1) % 100
-	var J = (year - 1) / 100
-	var h = (q + int((13 * (m + 1)) / 5) + K + int(K / 4) + int(J / 4) - 2 * J) % 7
-	return ((h + 5) % 7) + 1 # Adjust to make Sunday = 0, Monday = 1, ..., Saturday = 6
-
-func _get_week_of_year(datetime: Dictionary) -> Dictionary[String, int]:
-	var DAYS_IN_MONTHS = _get_days_in_months(datetime.year)
-	var start_day_of_year = _get_start_day_of_year(datetime.year)
-	var day_of_year = datetime.day
-	for i in range(datetime.month - 1):
-		day_of_year += DAYS_IN_MONTHS[i]
-	var week_of_year = ceil((day_of_year + start_day_of_year) / 7.0)
-	var year = datetime.year
-	if week_of_year > 52:
-		week_of_year = 1
-		year += 1
-	return {
-		"week": week_of_year,
-		"year": year
-	}
-
-func _get_date_from_week_weekday(week: int, weekday: int, year: int) -> Dictionary:
-	var DAYS_IN_MONTHS = _get_days_in_months(year)
-	var start_day_of_year = _get_start_day_of_year(year)
-	var total_days_in_year = 0
-	for days in DAYS_IN_MONTHS:
-		total_days_in_year += days
-	var day_of_year = (week - 1) * 7 + weekday - start_day_of_year
-
-	# Handle transition to the previous year
-	if day_of_year < 0:
-		year -= 1
-		DAYS_IN_MONTHS = _get_days_in_months(year)
-		total_days_in_year = 0
-		for days in DAYS_IN_MONTHS:
-			total_days_in_year += days
-		day_of_year += total_days_in_year
-
-	# Handle transition to the next year
-	if day_of_year >= total_days_in_year:
-		day_of_year -= total_days_in_year
-		year += 1
-		DAYS_IN_MONTHS = _get_days_in_months(year)
-
-	var month = 0
-	while day_of_year >= DAYS_IN_MONTHS[month]:
-		day_of_year -= DAYS_IN_MONTHS[month]
-		month += 1
-	
-	return {"year": year, "month": month + 1, "day": day_of_year + 1}
-
-func set_commits(commits: Array[Dictionary]):
-	_process_commits(commits)
+func set_commit_data(commit_data: Dictionary) -> void:
+	_process_commits(commit_data)
+	_process_streaks(3)
 	_update_calendar()
 	pass
 
-func _fill_week(datetime: Dictionary):
-	var key = _get_week_of_year(datetime)
-	if week_data.has(key):
+func _process_commits(commit_data: Dictionary):
+	var current_date = Time.get_date_dict_from_system()
+	var first_commit_date = commit_data.get("first_commit_date", current_date)
+	var last_commit_date = commit_data.get("last_commit_date", current_date)
+
+	# I don't think current_date can ever be less than first_commit_date,
+	if Time.get_unix_time_from_datetime_dict(current_date) < Time.get_unix_time_from_datetime_dict(first_commit_date):
+		first_commit_date = current_date
+	if Time.get_unix_time_from_datetime_dict(current_date) > Time.get_unix_time_from_datetime_dict(last_commit_date):
+		last_commit_date = current_date
+	
+	data = CalendarData.new(first_commit_date, last_commit_date)
+	for commit in commit_data.get("commits", []):
+		data.add_commit(commit)
+	data.sort()
+
+func _process_streaks(minimum_streak_length: int) -> void:
+	if data == null:
 		return
-	week_data[key] = []
-
-	for i in range(7):
-		var day_datetime = _get_date_from_week_weekday(key.week, i, key.year)
-		week_data[key].append({
-			"week": key.week,
-			"weekday": i,
-			"day": day_datetime.day,
-			"month": day_datetime.month,
-			"year": day_datetime.year,
-			"timestamp": Time.get_unix_time_from_datetime_string("{year}-{month}-{day}".format(day_datetime)),
-			"commits": 0,
-			"is_streak": false,
-			"messages": []
-		})
-
-func _fill_from_to(start: Dictionary, end: Dictionary):
-	var start_key = _get_week_of_year(start)
-	var end_key = _get_week_of_year(end)
-	var current_key = start_key
-	_fill_week(start)
-	while current_key.week < end_key.week or current_key.year < end_key.year:
-		var next_date = _get_date_from_week_weekday(current_key.week + 1, 0, current_key.year)
-		_fill_week(next_date)
-		current_key = _get_week_of_year(next_date)
-	_fill_week(end)
-		
-
-func _process_commits(commits: Array[Dictionary]):
-	week_data.clear()
-	
-	var last_commit_date = null
-	for commit in commits:
-		var key = _get_week_of_year(commit.date)
-		if last_commit_date == null:
-			last_commit_date = commit.date.duplicate()
-			last_commit_date.day = 1
-			_fill_week(last_commit_date)
-
-		_fill_from_to(last_commit_date, commit.date)
-		
-		last_commit_date = commit.date
-		
-		var weekday = commit.date.weekday
-		var activity = week_data[key][weekday]
-		activity.commits += 1
-		activity.messages.append(
-			"[%s] %s: %s" % [
-				Time.get_datetime_string_from_datetime_dict(commit.date, true),
-				commit.author,
-				commit.message
-			]
-		)
-		if commit.is_streak:
-			activity.is_streak = true
-	
-	if last_commit_date:
-		_fill_from_to(last_commit_date, Time.get_date_dict_from_system())
-	else:
-		_fill_week(Time.get_date_dict_from_system())
+	var iterator = CalendarDayIterator.new(data)
+	var streak: Array[CalendarDay] = []
+	var largest_streak: Array[CalendarDay] = []
+	for day in iterator:
+		if day.commits.size() > 0:
+			streak.append(day)
+		else:
+			if streak.size() >= minimum_streak_length:
+				for s in streak:
+					s.is_streak = true
+				if streak.size() > largest_streak.size():
+					largest_streak = streak.duplicate()
+			streak.clear()
+	if streak.size() >= minimum_streak_length:
+		for s in streak:
+			s.is_streak = true
+	for s in largest_streak:
+		s.is_largest_streak = true
 
 func _update_calendar():
 	var lines = []
-	var values = week_data.values()
 	var current_time = Time.get_date_dict_from_system()
 	current_time.hour = 0
 	current_time.minute = 0
@@ -163,68 +224,41 @@ func _update_calendar():
 	for day in ["", "S", "M", "T", "W", "T", "F", "S"]:
 		lines.append("[cell]%s[/cell]" % day)
 
-	var streak = [] # part = "[color=orange]🔥[/color]"
-	var largest_streak = 0
-	var largest_streak_start_index = INF
-	var largest_streak_end_index = - INF
-	for week in values:
-		var month_index = lines.size()
-		lines.append("[cell][/cell]")
+	for week in data.weeks:
+		if week.first_week_of_the_month:
+			var month_name = week.month_name
+			if week.date.month == 1:
+				month_name = "[u]%s[/u]" % month_name
+			lines.append("[cell]%s[/cell]" % month_name)
+		else:
+			lines.append("[cell][/cell]")
 		
-		for day in week:
-			var part = EMOJIS[day.commits > 0]
+		for day in week.days:
+			var emoji = EMOJIS.no_commit
+			if day.commits.size() > 0:
+				emoji = EMOJIS.has_commit
+			if day.is_streak:
+				emoji = EMOJIS.streak
+			if day.is_largest_streak:
+				emoji = EMOJIS.top_streak
 
-			if day.commits > 0:
+			var part = emoji
+
+			if day.commits.size() > 0:
 				part = "[hint=\"%s\"]%s[/hint]" % ["\n".join(day.messages), part]
 
-			if day.day == 1:
-				var data = MONTHS[day.month - 1]
-				if day.month == 1:
-					# this is the first month of the year
-					data = "[u]%s[/u]" % data
-					
-				lines[month_index] = "[cell]%s[/cell]" % data
+			var cell_options = ""
 			if day.timestamp == current_time:
-				part = "[pulse]%s[/pulse]" % part
+				cell_options = "border=#fff4"
 			if day.timestamp > current_time:
 				part = "[color=#fff2]%s[/color]" % part
 			
-			if day.is_streak:
-				streak.append([part, lines.size(), day.day == 1])
-				lines.append("_")
+			if day.date.day == 1:
+				part = "[cell bg=#8883 %s]%s[/cell]" % [cell_options, part]
 			else:
-				var streak_size = streak.size()
-				var is_valid_streak = streak_size > 3
-				var streak_start = INF
-				var streak_end = - INF
-				for streak_data in streak:
-					var streak_part = streak_data[0]
-					var streak_index = streak_data[1]
-					var is_first_of_month = streak_data[2]
-					if is_valid_streak:
-						streak_start = min(streak_start, streak_index)
-						streak_end = max(streak_end, streak_index)
-						# replace the emoji with a streak emoji
-						streak_part = streak_part.replace(EMOJIS[true], "[color=orange]🔥[/color]")
-					if is_first_of_month:
-						lines[streak_index] = "[cell bg=#8883]%s[/cell]" % streak_part
-					else:
-						lines[streak_index] = "[cell bg=#0000,#6661]%s[/cell]" % streak_part
-				streak.clear()
-				if day.day == 1:
-					lines.append("[cell bg=#8883]%s[/cell]" % part)
-				else:
-					lines.append("[cell bg=#0000,#6661]%s[/cell]" % part)
-
-				if is_finite(streak_start) and is_finite(streak_end) and streak_size >= largest_streak:
-					largest_streak = streak_size
-					largest_streak_start_index = streak_start
-					largest_streak_end_index = streak_end
-	
-	if is_finite(largest_streak_start_index) and is_finite(largest_streak_end_index):
-		for i in range(largest_streak_start_index, largest_streak_end_index + 1):
-			# make them [wave] to make them stand out
-			lines[i] = lines[i].replace("[color=orange]🔥[/color]", "[wave][color=red]❤️‍🔥[/color][/wave]")
+				part = "[cell bg=#0000,#6661 %s]%s[/cell]" % [cell_options, part]
+			
+			lines.append(part)
 
 	lines.append("[/table]")
 	text = "\n".join(lines)

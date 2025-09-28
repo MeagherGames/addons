@@ -1,8 +1,9 @@
 @tool
 extends RefCounted
 
-const JSON_GIT_PRETTY_FORMAT = "{%ad,\\\"message\\\":\\\"%s\\\", \\\"sha\\\":\\\"%H\\\", \\\"author\\\":\\\"%an\\\"}"
-const JSON_GIT_DATE_FORMAT = "\\\"day\\\":\\\"%a\\\",\\\"date\\\":\\\"%Y-%m-%dT%H:%M:%S\\\""
+const seperator = ",\t"
+const JSON_GIT_PRETTY_FORMAT = "%ad,\t%s,\t%H,\t%an"
+const JSON_GIT_DATE_FORMAT = "%a,\t%Y-%m-%dT%H:%M:%S"
 const MAX_NUM_COMMITS = 1000
 
 const DAYS = {
@@ -20,7 +21,7 @@ static func sort_by_datetime(a: Dictionary, b: Dictionary) -> bool:
 	var timestam_b = Time.get_unix_time_from_datetime_dict(b.date)
 	return timestam_a < timestam_b
 
-static func get_commits() -> Array[Dictionary]:
+static func get_commit_data() -> Dictionary:
 	var output = []
 	var exit_code = OS.execute("git", [
 		"log",
@@ -31,9 +32,11 @@ static func get_commits() -> Array[Dictionary]:
 
 	if exit_code != 0:
 		printerr("Failed to get git log", output)
-		return []
+		return {}
 
-	var json: Array[Dictionary] = []
+	var commits: Array[Dictionary] = []
+	var first_commit_date: Dictionary = {}
+	var last_commit_date: Dictionary = {}
 	for line in output:
 		var parts = []
 		if "\n" in line:
@@ -43,34 +46,25 @@ static func get_commits() -> Array[Dictionary]:
 			parts.append(line)
 		
 		for part in parts:
-			var commit = JSON.parse_string(part)
+			var commit_data = part.split(seperator)
+			var commit = {
+				"day": commit_data[0].strip_edges(),
+				"date": commit_data[1].strip_edges(),
+				"message": commit_data[2].strip_edges(),
+				"sha": commit_data[3].strip_edges(),
+				"author": commit_data[4].strip_edges(),
+			}
 			if commit:
+				var timestamp = Time.get_unix_time_from_datetime_string(commit.date)
 				commit.date = Time.get_datetime_dict_from_datetime_string(commit.date, true)
-				json.append(commit)
+				commits.append(commit)
+				if first_commit_date.is_empty() or timestamp < Time.get_unix_time_from_datetime_dict(first_commit_date):
+					first_commit_date = commit.date
+				if last_commit_date.is_empty() or timestamp > Time.get_unix_time_from_datetime_dict(last_commit_date):
+					last_commit_date = commit.date
 
-	json.sort_custom(sort_by_datetime) # Likely already sorted this way, but just in case
-	for i in json.size():
-		var commit = json[i]
-		commit.is_streak = false
-		if i > 0:
-			var prev_commit = json[i - 1]
-			var one_day = 86400 # 1 day in seconds
-			var commit_datetime = commit.date.duplicate()
-			var prev_commit_datetime = prev_commit.date.duplicate()
-			# remove the time part of the datetime
-			commit_datetime.hour = 0
-			commit_datetime.minute = 0
-			commit_datetime.second = 0
-			prev_commit_datetime.hour = 0
-			prev_commit_datetime.minute = 0
-			prev_commit_datetime.second = 0
-			# if the distance between the two commits is 1 day, then it's a streak
-			var diff = Time.get_unix_time_from_datetime_dict(commit_datetime) - Time.get_unix_time_from_datetime_dict(prev_commit_datetime)
-			if is_zero_approx(diff):
-				# if the commits are on the same day, then
-				continue
-			if diff <= one_day:
-				prev_commit.is_streak = true
-				commit.is_streak = true
-	
-	return json
+	return {
+		"commits": commits,
+		"first_commit_date": first_commit_date,
+		"last_commit_date": last_commit_date,
+	}

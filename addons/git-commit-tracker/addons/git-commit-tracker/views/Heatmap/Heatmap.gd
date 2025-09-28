@@ -3,9 +3,9 @@ extends MarginContainer
 
 signal refresh()
 
-func set_commits(commits: Array[Dictionary]):
-	%WeekHeatmap.set_commits(commits)
-	%Calendar.set_commits(commits)
+func set_commit_data(commit_data: Dictionary):
+	%WeekHeatmap.set_commits(commit_data.get("commits", []))
+	%Calendar.set_commit_data(commit_data)
 	%RefreshButton.disabled = false
 
 
