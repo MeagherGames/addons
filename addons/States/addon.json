@@ -6,6 +6,6 @@
     "version": "1.0.0",
     "icon": "States/state_icon.png",
     "dependencies": [
-        "Utilities/Utilities/PriorityQueue.gd"
+        "Utilities/addons/Utilities/PriorityQueue.gd"
     ]
 }
