@@ -2,9 +2,9 @@
 extends EditorPlugin
 
 var import_plugins = [
+	preload("res://addons/aseprite-importer/importers/Texture2DImporter.gd").new(),
 	preload("res://addons/aseprite-importer/importers/SceneImporter.gd").new(),
 	preload("res://addons/aseprite-importer/importers/AnimatedSprite2DImporter.gd").new(),
-	preload("res://addons/aseprite-importer/importers/Texture2DImporter.gd").new(),
 ]
 
 var tools = [
