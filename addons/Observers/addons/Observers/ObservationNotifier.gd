@@ -1,4 +1,4 @@
-class_name ObservationNotifier extends Node
+class_name ObservationNotifier extends Node3D
 
 enum OBSERVER_NOTIFIER_MODE{
 	OCCLUSION = 1, # Observers when body enters the area
