@@ -1,4 +1,4 @@
-class_name ObservationNotifier extends Node
+class_name ObservationNotifier extends Node3D
 
 enum OBSERVER_NOTIFIER_MODE{
 	OCCLUSION = 1, # Observers when body enters the area
@@ -40,13 +40,15 @@ signal hidden_to(observer: Observer)
 
 @onready var _body: PhysicsBody3D = get_node_or_null(what) if not what.is_empty() else get_parent()
 
-var _area_3d: Area3D
+var _area_3d: Area3D = null
 var observers: Dictionary[int,Dictionary] = {}
 var check_counter:int = 0
 var local_time_scale: float = 1.0
 
 func _initialize() -> void:
 	local_time_scale = float(occlusion_check_frequency)
+	if _area_3d != null and _area_3d.is_valid():
+		return
 	_area_3d = Area3D.new()
 	var collision_shape:CollisionShape3D
 	for child in _body.get_children():

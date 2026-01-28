@@ -3,53 +3,55 @@ extends Node3D
 
 const SpriteShader = preload("res://addons/directional_sprite_3d/directional_sprite_shader_3d.gdshader")
 
-@export var texture:Texture2D : set = set_texture
+@export var texture: Texture2D: set = set_texture
 
-@export var offset:Vector2 = Vector2.ZERO : set = set_offset
-@export var is_centered:bool = true : set = set_is_centered
-@export var pixels_per_meter:float = 32.0 : set = set_pixels_per_meter
+@export var offset: Vector2 = Vector2.ZERO: set = set_offset
+@export var is_centered: bool = true: set = set_is_centered
+@export var pixels_per_meter: float = 32.0: set = set_pixels_per_meter
 @export_group("Animation")
-@export var frame_size:Vector2 = Vector2(32,32) : set = set_frame_size
-@export var frame:int = 0 : set = set_frame
+@export var frame_size: Vector2 = Vector2(0, 0): set = set_frame_size
+@export var frame: int = 0: set = set_frame
 @export_group("Regions")
-@export var regions_enabled:bool = false :
+@export var regions_enabled: bool = false:
     set(value):
         regions_enabled = value
         _update_regions()
-@export var front_region:Vector4i = Vector4i(0,0,0,0) :
+@export var front_region: Vector4i = Vector4i(0, 0, 0, 0):
     set(value):
         front_region = value
         _update_regions()
-@export var left_region:Vector4i = Vector4i(0,0,0,0) :
+@export var left_region: Vector4i = Vector4i(0, 0, 0, 0):
     set(value):
         left_region = value
         _update_regions()
-@export var right_region:Vector4i = Vector4i(0,0,0,0) :
+@export var right_region: Vector4i = Vector4i(0, 0, 0, 0):
     set(value):
         right_region = value
         _update_regions()
-@export var back_region:Vector4i = Vector4i(0,0,0,0) :
+@export var back_region: Vector4i = Vector4i(0, 0, 0, 0):
     set(value):
         back_region = value
         _update_regions()
 @export_group("Material")
-@export var flip_h:bool = false : set = set_flip_h
-@export var flip_v:bool = false : set = set_flip_v
-@export var modulate:Color = Color(1,1,1,1) : set = set_modulate
-@export_range(0.0, 1.0) var alpha_scissor_threshold:float = 0.5 : set = set_alpha_scissor_threshold
-@export_range(0.0, 1.0) var specular:float = 0.5 : set = set_specular
-@export_range(0.0, 1.0) var metallic:float = 0.0 : set = set_metallic
-@export_range(0.0, 1.0) var roughness:float = 1.0 : set = set_roughness
-@export_enum("cardinal", "diagonal") var side_mode:int = 0 : set = set_side_mode
-@export var cast_shadow:RenderingServer.ShadowCastingSetting = RenderingServer.SHADOW_CASTING_SETTING_ON : set = set_cast_shadow
-@export_enum("billboard", "billboard_y") var billboard_mode:int = 0 : set = set_billboard_mode
+@export var flip_h: bool = false: set = set_flip_h
+@export var flip_v: bool = false: set = set_flip_v
+@export var modulate: Color = Color(1, 1, 1, 1): set = set_modulate
+@export_range(0.0, 1.0) var alpha_scissor_threshold: float = 0.5: set = set_alpha_scissor_threshold
+@export_range(0.0, 1.0) var specular: float = 0.5: set = set_specular
+@export_range(0.0, 1.0) var metallic: float = 0.0: set = set_metallic
+@export_range(0.0, 1.0) var roughness: float = 1.0: set = set_roughness
+@export_enum("cardinal", "diagonal") var side_mode: int = 0: set = set_side_mode
+@export var cast_shadow: RenderingServer.ShadowCastingSetting = RenderingServer.SHADOW_CASTING_SETTING_ON: set = set_cast_shadow
+@export_enum("billboard", "billboard_y") var billboard_mode: int = 0: set = set_billboard_mode
+@export_group("Visual Instance")
+@export_flags_3d_render var layers: int = 1: set = set_layers
 
-var billboard_tilt_factor:float = 0.0 : set = set_billboard_tilt_factor
-var instance:RID
-var mesh:RID
-var material:RID
+var billboard_tilt_factor: float = 0.0: set = set_billboard_tilt_factor
+var instance: RID
+var mesh: RID
+var material: RID
 
-var _is_drawing:bool = false
+var _is_drawing: bool = false
 
 func _init():
     instance = RenderingServer.instance_create()
@@ -69,6 +71,7 @@ func _queue_draw():
     _draw.call_deferred()
 
 func _draw():
+    _is_drawing = false
     if not is_inside_tree():
         return
 
@@ -81,7 +84,6 @@ func _draw():
     generate_mesh()
     RenderingServer.material_set_shader(material, SpriteShader.get_rid())
 
-    _is_drawing = false
 
 func _update_visibility():
     RenderingServer.instance_set_visible(instance, is_visible_in_tree())
@@ -112,20 +114,21 @@ func _get_property_list() -> Array[Dictionary]:
 
 func get_item_rect() -> Rect2:
     if not texture:
-        return Rect2(0,0,1,1)
+        return Rect2(0, 0, 1, 1)
 
     @warning_ignore("shadowed_variable")
-    var offset:Vector2 = self.offset
+    var offset: Vector2 = self.offset
     var size = frame_size
+    if size.is_zero_approx():
+        size = texture.get_size()
 
     if is_centered:
         offset -= size / 2.0
     
-    
     if size == Vector2.ZERO:
-        size = Vector2(1,1)
+        size = Vector2(1, 1)
     
-    return Rect2(offset , size)
+    return Rect2(offset, size)
 
 func _swap(arr, i, j):
     var temp = arr[i]
@@ -133,12 +136,11 @@ func _swap(arr, i, j):
     arr[j] = temp
 
 func generate_mesh() -> void:
-
-    var rect:Rect2 = get_item_rect()
-    var aabb:AABB = AABB()
+    var rect: Rect2 = get_item_rect()
+    var aabb: AABB = AABB()
     var pixel_size = 1.0 / pixels_per_meter
     
-    var vertices:PackedVector3Array = [
+    var vertices: PackedVector3Array = [
         Vector3(rect.position.x, rect.position.y, 0) * pixel_size,
         Vector3(rect.position.x + rect.size.x, rect.position.y, 0) * pixel_size,
         Vector3(rect.position.x + rect.size.x, rect.position.y + rect.size.y, 0) * pixel_size,
@@ -148,7 +150,7 @@ func generate_mesh() -> void:
     for v in vertices:
         aabb = aabb.expand(v)
 
-    var uvs:PackedVector2Array = [
+    var uvs: PackedVector2Array = [
         Vector2(0, 1),
         Vector2(1, 1),
         Vector2(1, 0),
@@ -164,8 +166,8 @@ func generate_mesh() -> void:
         _swap(uvs, 1, 2)
         
 
-    var indices:PackedInt32Array = [0, 3, 2, 0, 2, 1]
-    var colors:PackedColorArray = [modulate, modulate, modulate, modulate]
+    var indices: PackedInt32Array = [0, 3, 2, 0, 2, 1]
+    var colors: PackedColorArray = [modulate, modulate, modulate, modulate]
 
     var arrays = []
     arrays.resize(RenderingServer.ARRAY_MAX)
@@ -184,7 +186,7 @@ func generate_mesh() -> void:
     RenderingServer.material_set_param(material, "alpha_scissor_threshold", alpha_scissor_threshold)
     _update_regions()
 
-func _get_region_uv(frame_size:Vector2,texture_size:Vector2,region:Vector4i) -> Vector4:
+func _get_region_uv(frame_size: Vector2, texture_size: Vector2, region: Vector4i) -> Vector4:
     if not texture:
         return Vector4.ZERO
     
@@ -194,34 +196,36 @@ func _get_region_uv(frame_size:Vector2,texture_size:Vector2,region:Vector4i) -> 
     
     # Convert to UV coordinates (0-1 range)
     return Vector4(
-        actual_x / texture_size.x,                    # min_x
-        actual_y / texture_size.y,                    # min_y
-        (actual_x + region.z) / texture_size.x,       # max_x
-        (actual_y + region.w) / texture_size.y        # max_y
+        actual_x / texture_size.x, # min_x
+        actual_y / texture_size.y, # min_y
+        (actual_x + region.z) / texture_size.x, # max_x
+        (actual_y + region.w) / texture_size.y # max_y
     )
 
 func _update_regions():
     if not texture:
         return
-    var texture_size:Vector2 = texture.get_size()
+    var texture_size: Vector2 = texture.get_size()
+    var size = frame_size
+    if size.is_zero_approx():
+        size = texture_size
     if regions_enabled:
-        RenderingServer.material_set_param(material, "front_region", _get_region_uv(frame_size,texture_size, front_region))
-        RenderingServer.material_set_param(material, "left_region", _get_region_uv(frame_size,texture_size, left_region))
-        RenderingServer.material_set_param(material, "right_region", _get_region_uv(frame_size,texture_size, right_region))
-        RenderingServer.material_set_param(material, "back_region", _get_region_uv(frame_size,texture_size, back_region))
+        RenderingServer.material_set_param(material, "front_region", _get_region_uv(size, texture_size, front_region))
+        RenderingServer.material_set_param(material, "left_region", _get_region_uv(size, texture_size, left_region))
+        RenderingServer.material_set_param(material, "right_region", _get_region_uv(size, texture_size, right_region))
+        RenderingServer.material_set_param(material, "back_region", _get_region_uv(size, texture_size, back_region))
     else:
         # We're just going to expect that directional angles are split vertically
         # while animation frames are always split horizontally
-        
         var regions = ["front_region", "left_region", "right_region", "back_region"]
         for i in regions.size():
             # Create a region for this direction (x=0, y=frame_size.y*i, width=frame_size.x, height=frame_size.y)
-            var direction_region = Vector4i(0, int(frame_size.y * i), int(frame_size.x), int(frame_size.y))
-            var region_uv = _get_region_uv(frame_size, texture_size, direction_region)
+            var direction_region = Vector4i(0, int(size.y * i), int(size.x), int(size.y))
+            var region_uv = _get_region_uv(size, texture_size, direction_region)
             RenderingServer.material_set_param(material, regions[i], region_uv)
 
 
-func set_texture(value:Texture2D) -> void:
+func set_texture(value: Texture2D) -> void:
     if texture:
         texture.changed.disconnect(_queue_draw)
     texture = value
@@ -229,70 +233,74 @@ func set_texture(value:Texture2D) -> void:
         texture.changed.connect(_queue_draw)
     _queue_draw()
 
-func set_offset(value:Vector2) -> void:
+func set_offset(value: Vector2) -> void:
     offset = value
     _queue_draw()
 
-func set_is_centered(value:bool) -> void:
+func set_is_centered(value: bool) -> void:
     is_centered = value
     _queue_draw()
 
-func set_pixels_per_meter(value:float) -> void:
+func set_pixels_per_meter(value: float) -> void:
     pixels_per_meter = value
     _queue_draw()
 
-func set_frame_size(value:Vector2) -> void:
+func set_frame_size(value: Vector2) -> void:
     frame_size = value
     _queue_draw()
 
-func set_frame(value:int) -> void:
+func set_frame(value: int) -> void:
     if frame == value:
         return
     
     frame = value
     _update_regions()
 
-func set_flip_h(value:bool) -> void:
+func set_flip_h(value: bool) -> void:
     flip_h = value
     _queue_draw()
 
-func set_flip_v(value:bool) -> void:
+func set_flip_v(value: bool) -> void:
     flip_v = value
     _queue_draw()
 
-func set_modulate(value:Color) -> void:
+func set_modulate(value: Color) -> void:
     modulate = value
     _queue_draw()
 
-func set_alpha_scissor_threshold(value:float) -> void:
+func set_alpha_scissor_threshold(value: float) -> void:
     alpha_scissor_threshold = value
     RenderingServer.material_set_param(material, "alpha_scissor_threshold", alpha_scissor_threshold)
 
-func set_specular(value:float) -> void:
+func set_specular(value: float) -> void:
     specular = value
     RenderingServer.material_set_param(material, "specular", specular)
 
-func set_metallic(value:float) -> void:
+func set_metallic(value: float) -> void:
     metallic = value
     RenderingServer.material_set_param(material, "metallic", metallic)
 
-func set_roughness(value:float) -> void:
+func set_roughness(value: float) -> void:
     roughness = value
     RenderingServer.material_set_param(material, "roughness", roughness)
 
-func set_billboard_mode(value:int) -> void:
+func set_billboard_mode(value: int) -> void:
     billboard_mode = value
     RenderingServer.material_set_param(material, "billboard_y", billboard_mode == 1)
     notify_property_list_changed()
 
-func set_side_mode(value:int) -> void:
+func set_side_mode(value: int) -> void:
     side_mode = value
     RenderingServer.material_set_param(material, "cardinal_sides", side_mode == 0)
 
-func set_cast_shadow(value:RenderingServer.ShadowCastingSetting) -> void:
+func set_cast_shadow(value: RenderingServer.ShadowCastingSetting) -> void:
     cast_shadow = value
     RenderingServer.instance_geometry_set_cast_shadows_setting(instance, cast_shadow)
 
-func set_billboard_tilt_factor(value:float) -> void:
+func set_billboard_tilt_factor(value: float) -> void:
     billboard_tilt_factor = value
     RenderingServer.material_set_param(material, "tilt_factor", billboard_tilt_factor)
+
+func set_layers(value: int) -> void:
+    layers = value
+    RenderingServer.instance_set_layer_mask(instance, layers)

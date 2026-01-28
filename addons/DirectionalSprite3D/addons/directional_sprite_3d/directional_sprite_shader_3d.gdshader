@@ -88,16 +88,18 @@ void vertex(){
 		COLOR.rgb = srgb(COLOR.rgb);
 	}
 	
-	vec3 cameraDirectionView = normalize(INV_VIEW_MATRIX[2].xyz);
+	mat4 inv_view = MAIN_CAM_INV_VIEW_MATRIX;
+	
+	vec3 cameraDirectionView = normalize(inv_view[2].xyz);
 	vec3[4] sides = get_sides(MODEL_MATRIX);
 	closest_side = get_closest_side(sides, cameraDirectionView);
 	
-	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(inv_view[0], inv_view[1], inv_view[2], MODEL_MATRIX[3]);
 	MODELVIEW_NORMAL_MATRIX = mat3(MODELVIEW_MATRIX);
 	
 	if (billboard_y) {
 		vec3 scale = vec3(length(MODEL_MATRIX[0].xyz), length(MODEL_MATRIX[1].xyz), length(MODEL_MATRIX[2].xyz));
-		vec3 cam_dir = normalize(INV_VIEW_MATRIX[2].xyz);
+		vec3 cam_dir = normalize(inv_view[2].xyz);
 		float vertical_angle_factor = abs(cam_dir.y);
 		float tilt_amount = vertical_angle_factor * tilt_factor;
 		vec3 right_vec = normalize(cross(vec3(0.0, 1.0, 0.0), cam_dir));
