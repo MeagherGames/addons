@@ -2,58 +2,47 @@
 class_name State extends Node
 
 ## A [State] is a piece of logic that only runs when it is active.
-## If this node is not a child of a State, it will automatically call enter() when it is added to the scene tree.
-## It will call the update and physics_update functions every frame while it is active.
-## And it will automatically call exit() when it is removed from the scene tree.
-## See [ConcurrentState] and [SelectState] for states that control when other states are active.
 
 class TransitionEvent extends RefCounted:
-	var initiating_state: State
+	var initiator: Node
 	var active_state: State
 	var is_accepted: bool = false
 
 	@warning_ignore("shadowed_variable")
-	func _init(initiating_state: State):
-		self.initiating_state = initiating_state
-		self.active_state = initiating_state
+	func _init(state:State):
+		self.initiator = state
+		self.active_state = state
 
 	func accept():
 		is_accepted = true
 
-## Emitted when the state is entered.
+## Emitted when the state is enabled.
 signal enabled()
-## Emitted when the state is exited.
+## Emitted when the state is disabled.
 signal disabled()
 ## Emitted when a transition is requested.
 signal transition_requested(event: TransitionEvent)
 
-@export var is_enabled: bool = true: set = _set_enabled
+## If this state is currently enabled or not
+@export var is_enabled: bool = true:
+	set(value):
+		is_enabled = value
+		if _enable_state_changing:
+			# We can't change the process_mode while in the middle of the node being enabled/disabled
+			set_deferred("process_mode", PROCESS_MODE_INHERIT if value else PROCESS_MODE_DISABLED)
+		else:
+			process_mode = Node.PROCESS_MODE_INHERIT if value else PROCESS_MODE_DISABLED
+	get:
+		return is_inside_tree() and can_process()
 
-var _process_mode_update_queued: bool = false
-
-func _set_enabled(value):
-	if is_enabled == value:
-		return
-	is_enabled = value
-	if is_inside_tree():
-		if not is_enabled:
-			process_mode = PROCESS_MODE_DISABLED
-		if not _process_mode_update_queued:
-			_process_mode_update_queued = true
-			_update_process_mode()
-
-func _update_process_mode():
-	await get_tree().process_frame
-	process_mode = PROCESS_MODE_INHERIT if is_enabled else PROCESS_MODE_DISABLED
-	_process_mode_update_queued = false
-
-func is_active() -> bool:
-	return is_enabled and can_process()
+var _enable_state_changing: bool = false
 
 ## Call this function to request a transition, what that means depends on the parent state.
 ## This bubbles up until it reaches a state that accepts the transition.
 func request_transition() -> void:
+	assert(not _enable_state_changing, "Currently enabling/disabling this state, transition cannot be requested.")
 	if get_parent() is State:
+		#push_warning(get_path(), " REQUESTED TRANSITION")
 		var event = TransitionEvent.new(self)
 		get_parent()._request_transition(event)
 
@@ -67,9 +56,20 @@ func _request_transition(event: TransitionEvent):
 		push_warning("Unhandled transition request starting from \"%s\"" % event.initiating_state.get_path())
 
 func _notification(what):
-	if (what == NOTIFICATION_ENTER_TREE or what == NOTIFICATION_UNPAUSED) and is_active():
-		#prints("ENABLED", get_path())
-		enabled.emit()
-	if (what == NOTIFICATION_PAUSED or what == NOTIFICATION_EXIT_TREE):
-		#prints("DISABLED", get_path())
-		disabled.emit()
+	# There is a case where a node can be "enabled" but the tree is paused when ready
+	# If this node isn't disabled we can assume it might be activated eventually
+	if what == NOTIFICATION_READY and get_tree().paused:
+		if process_mode != PROCESS_MODE_DISABLED:
+			enabled.emit()
+		else:
+			disabled.emit()
+		
+	if (what == NOTIFICATION_ENABLED or what == NOTIFICATION_DISABLED):
+		_enable_state_changing = true
+		if is_enabled:
+			#push_warning(get_path(), " ENABLED")
+			enabled.emit()
+		else:
+			#push_warning(get_path() if is_inside_tree() else name, " DISABLED")
+			disabled.emit()
+		_enable_state_changing = false

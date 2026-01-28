@@ -3,9 +3,10 @@ class_name UtilityGroupState extends UtilityState
 ## A UtilityGroupState is a utility state that can have multiple child [UtilityState]s or [UtilitySelectorState]s.
 
 ## Determines if the state should be considered based on its child states.
+## Will only return true if all children should be considered
 func should_consider() -> bool:
 	for child in get_children():
-		if (child is UtilityState or child is UtilitySelectState) and not await child.should_consider():
+		if (child is UtilityState or child is UtilitySelectState) and not child.should_consider():
 			return false
 	return true
 
@@ -21,7 +22,7 @@ func get_utility() -> float:
 		if child is UtilityState or child is UtilitySelectState:
 			utility *= lerp(
 				1.0,
-				clampf(await child.get_utility(), 0, 1),
+				clampf(child.get_utility(), 0, 1),
 				child.weight / total_child_weight
 			)
 			

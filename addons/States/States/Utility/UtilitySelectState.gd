@@ -1,21 +1,21 @@
 @icon("./utility_state_icon.png")
 class_name UtilitySelectState extends SelectState
 
-## The utility select state selects a child state based on the utility of the child [UtilityState].
-## If the child is not a [UtilityState] but still a [State], it's utility is considered to be 0. This can be used to have a fallback state.
+## The UtilitySelectState selects a child state based on the utility, see [UtilityState].
+## Children can return [constant @GDScript.INF] as their utility to be immediately selected
+## If the child is not a [UtilityState] but still a [State], it's utility is considered to be 0.
 
-const EPSILON = 0.01
+const _EPSILON = 0.01
 
-## The weight of this state in the utility calculation, higher weights are more likely to be selected
+## The weight of this state in the utility calculation, higher weights are more likely to be selected.
 @export var weight: float = 1.0
 ## How many of the top children should be considered for selection.
 @export_range(1, 1, 1, "or_greater") var select_from_top: int = 1
 
-## The bias towards children with lower index. A value of 0 means no bias, a value of 1 means maximum bias.
+## The bias towards children based on order in the tree. A value of 0 means no bias, a value of 1 means child order matters when making a decision.
 @export_range(0, 1, 0.01) var children_order_bias: float = 1.0
 
-var rng: RandomNumberGenerator = RandomNumberGenerator.new()
-var _select_best_state_queued: bool = false
+var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 @warning_ignore("unused_parameter")
 func _on_transition_requested(event: TransitionEvent):
@@ -28,23 +28,13 @@ func _on_transition_requested(event: TransitionEvent):
 			# We are the top level UtilitySelectState
 			# We should accept the transition
 			event.accept()
-		_queue_select_best_state()
+		_select_best_state()
 	else:
 		super._on_transition_requested(event)
-
-func _queue_select_best_state():
-	if _select_best_state_queued:
-		return
-	_select_best_state_queued = true
-	await _select_best_state()
-	_select_best_state_queued = false
 
 func _select_best_state():
 	if get_child_count() == 0:
 		return
-
-	if not Engine.is_in_physics_frame():
-		await get_tree().physics_frame
 	
 	var queue: PriorityQueue = PriorityQueue.new(true) # max heap
 	
@@ -66,15 +56,15 @@ func _select_best_state():
 		if total_child_weight > 0.0:
 			child_factor = child.weight / total_child_weight
 
-		var utility = await child.get_utility() * child_factor
+		var utility = child.get_utility() * child_factor
 		if not is_finite(utility):
 			# Infinite utility means immediate selection (emergency states)
 			_select_new_state(child)
 			return
 
-		# Apply index bias to favor earlier children when utilities are close
+		# Apply index bias to favor children when utilities are close
 		if children_order_bias > 0.0:
-			var index_weight = remap((float(child.get_index()) / float(get_child_count())), 0.0, 1.0, 1.0, 1.0 - EPSILON)
+			var index_weight = remap((float(child.get_index()) / float(get_child_count())), 0.0, 1.0, 1.0, 1.0 - _EPSILON)
 			utility = lerp(utility, utility * index_weight, children_order_bias)
 		
 		queue.push(utility, child)
@@ -100,7 +90,7 @@ func _select_best_state():
 		top.append(queue.pop())
 	
 	# Roulette wheel selection based on utility weights
-	var random_value = rng.randf() * total_weight
+	var random_value = _rng.randf() * total_weight
 	var best_child = 0
 	for i in select_count:
 		random_value -= weights[i]
@@ -111,19 +101,17 @@ func _select_best_state():
 
 ## Returns true if the active state should be considered for selection.
 func should_consider() -> bool:
-	var should_consider_current_active_state: bool = false
-	if active_state:
-		should_consider_current_active_state = await active_state.should_consider()
-	if not should_consider_current_active_state:
-		await _queue_select_best_state()
+	if not active_state or not active_state.should_consider():
+		_select_best_state()
 	if not active_state:
 		return false
-	return await active_state.should_consider()
+	return active_state.should_consider()
 
 ## Returns 1.0 as the utility of this state.
+## This is to allow nested UtilitySelectSates.
 func get_utility() -> float:
 	return 1.0
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_ENTER_TREE:
-		rng.seed = randi()
+		_rng.seed = randi()
