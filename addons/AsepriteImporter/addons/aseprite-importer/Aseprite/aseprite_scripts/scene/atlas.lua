@@ -23,15 +23,29 @@ function Atlas:use_empty_region()
     return self.empty_region
 end
 
-function Atlas:add_image(image, region, offset_x, offset_y)
+function Atlas:find_similar_region_from_image(image)
+    for img, region in pairs(self.images) do
+        if img:isEqual(image) then
+            return region
+        end
+    end
+    return nil
+end
+
+function Atlas:add_image(image, offset_x, offset_y)
     assert(image, "Image cannot be nil")
-    assert(region, "Region cannot be nil")
     assert(image.width and image.height, "Image must have width and height")
     assert(image.width > 0 and image.height > 0, "Image must have a valid size")
     if self.images[image] ~= nil then
-        return -- Image already added
+        return self.images[image] -- Image already added
     end
     -- offsets only used for grid packing
+    local region = self:find_similar_region_from_image(image)
+    if region then
+        return region
+    else
+        region = {}
+    end
     region.offset_x = offset_x or 0
     region.offset_y = offset_y or 0
     region.x = 0
@@ -43,10 +57,11 @@ function Atlas:add_image(image, region, offset_x, offset_y)
         image = image,
         region = region
     })
+    return region
 end
 
-function Atlas:pack(grid_width)
-    grid_width = grid_width or 0
+function Atlas:pack(grid_pack)
+    local grid_width = grid_pack and math.ceil(math.sqrt(#self.data)) or 0
     if grid_width > 0 then
         return self:pack_grid(grid_width)
     else

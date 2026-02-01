@@ -8,7 +8,7 @@ var import_plugins = [
 ]
 
 var tools = [
-	preload("res://addons/aseprite-importer/EditorScripts/AnimationTreeFromAnimationPlayer.gd").new(),
+	preload("res://addons/aseprite-importer/Tools/AnimationTreeFromAnimationPlayer.gd").new(),
 ]
 
 func _enter_tree():

@@ -1,8 +1,5 @@
-extends RefCounted
+@abstract class_name AsepriteImporterTool extends RefCounted
 
-func get_name() -> StringName:
-    push_error("get_name() not implemented")
-    return ""
+@abstract func get_name() -> StringName
 
-func run() -> void:
-    push_error("run() not implemented")
+@abstract func run() -> void

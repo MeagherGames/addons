@@ -102,7 +102,7 @@ function Frame:from_cel(cel)
             end
         end
         if use_atlas then
-            atlas:add_image(cel.image, o.region, cel.position.x, cel.position.y)
+            o.region = atlas:add_image(cel.image, cel.position.x, cel.position.y)
         end
     end
     return o

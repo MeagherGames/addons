@@ -23,4 +23,3 @@ Add these keywords to your layer's "User Data" field (comma-separated):
 
 - User data should be comma-separated if using multiple options
 - Keywords are case-sensitive
-

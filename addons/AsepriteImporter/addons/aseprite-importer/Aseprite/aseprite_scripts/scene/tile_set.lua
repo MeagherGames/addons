@@ -70,7 +70,7 @@ function TileSet:generate_image(tileset)
         ::continue::
     end
 
-    atlas:add_image(image, self.region) -- Add the image to the atlas
+    self.region = atlas:add_image(image) -- Add the image to the atlas
 end
 
 function TileSet:from_tile_set(tileset)

@@ -33,6 +33,7 @@ func _get_option_visibility(path: String, option_name: StringName, options: Dict
 	return true
 
 func _import(source_file, save_path, options, _platform_variants, _gen_files):
+	# options.debug = true
 	if options.get("grid_pack", true):
 		options.pack_mode = "grid"
 	var aseprite_file = Aseprite.load_file(source_file, options)
