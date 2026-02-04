@@ -60,10 +60,11 @@ function Atlas:add_image(image, offset_x, offset_y)
     return region
 end
 
-function Atlas:pack(grid_pack)
-    local grid_width = grid_pack and math.ceil(math.sqrt(#self.data)) or 0
-    if grid_width > 0 then
-        return self:pack_grid(grid_width)
+function Atlas:pack(pack_mode)
+    if pack_mode == "grid" then
+        return self:pack_grid(math.ceil(math.sqrt(#self.data)))
+    elseif pack_mode == "none" then
+        return self:pack_grid(#self.data)
     else
         return self:pack_scan()
     end

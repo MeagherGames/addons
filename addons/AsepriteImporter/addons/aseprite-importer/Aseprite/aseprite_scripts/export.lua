@@ -41,7 +41,7 @@ local Scene = dofile("./scene/scene.lua")
 atlas = Atlas:new() -- global so the scene can access it
 
 local scene = Scene:from_sprite() -- Modifies the atlas
-local atlas_image = atlas:pack(app.params["pack_mode"] == "grid")
+local atlas_image = atlas:pack(app.params["pack_mode"])
 
 atlas_image:saveAs(atlas_path)
 local data = scene:to_json()
