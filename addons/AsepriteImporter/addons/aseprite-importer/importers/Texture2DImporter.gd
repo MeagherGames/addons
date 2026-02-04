@@ -2,6 +2,7 @@
 extends EditorImportPlugin
 
 const Aseprite = preload("res://addons/aseprite-importer/Aseprite/Aseprite.gd")
+const AnimatedAsepriteTexture = preload("res://addons/aseprite-importer/Aseprite/AnimatedAsepriteTexture.gd")
 
 func _get_importer_name(): return "MeagherGames.aseprite.Texture2D"
 
@@ -24,9 +25,15 @@ func _get_preset_name(_preset: int): return "Default"
 func _get_import_options(_path: String, _preset: int) -> Array[Dictionary]:
 	return [
 		{
-			"name": "grid_pack",
-			"default_value": true,
+			"name": "pack_mode",
+			"property_hint": PROPERTY_HINT_ENUM,
+			"hint_string": "none,grid,smart",
+			"default_value": "none",
 		},
+		{
+			"name": "animated_aseprite_texture_enabled",
+			"default_value": false,
+		}
 	]
 
 func _get_option_visibility(path: String, option_name: StringName, options: Dictionary) -> bool:
@@ -34,13 +41,17 @@ func _get_option_visibility(path: String, option_name: StringName, options: Dict
 
 func _import(source_file, save_path, options, _platform_variants, _gen_files):
 	# options.debug = true
-	if options.get("grid_pack", true):
-		options.pack_mode = "grid"
 	var aseprite_file = Aseprite.load_file(source_file, options)
 	var path = save_path + "." + _get_save_extension()
 
 	if aseprite_file.is_empty():
 		return FAILED
-	
-	var atlas_texture = ImageTexture.create_from_image(Image.load_from_file(aseprite_file.meta.atlas_path))
-	return ResourceSaver.save(atlas_texture, path)
+
+	var atlas = ImageTexture.create_from_image(Image.load_from_file(aseprite_file.meta.atlas_path))
+	if options.get("animated_aseprite_texture_enabled", false):
+		var animated_texture = AnimatedAsepriteTexture.new()
+		animated_texture.aseprite_data = aseprite_file
+		animated_texture.atlas = atlas
+		return ResourceSaver.save(animated_texture, path)
+
+	return ResourceSaver.save(atlas, path)
