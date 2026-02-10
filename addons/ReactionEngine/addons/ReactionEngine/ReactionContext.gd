@@ -32,12 +32,12 @@ func trigger_rules(entity: ReactionEntity, trigger: ReactionTrigger) -> void:
 
 
 func _can_trigger_rule(entity: ReactionEntity, rule: ReactionRule) -> bool:
-	var trigger_data: Dictionary = _entity_trigger_data.get(entity, null)
-	if trigger_data == null:
+	var trigger_data: Dictionary = _entity_trigger_data.get(entity, {})
+	if trigger_data.is_empty():
 		return true
 	
-	var rule_trigger_data: Dictionary = trigger_data.get(rule.trigger, null)
-	if rule_trigger_data == null:
+	var rule_trigger_data: Dictionary = trigger_data.get(rule.trigger, {})
+	if rule_trigger_data.is_empty():
 		return true
 
 	var trigger_count = rule_trigger_data.get(rule, 0)
@@ -47,15 +47,11 @@ func _can_trigger_rule(entity: ReactionEntity, rule: ReactionRule) -> bool:
 	return true
 
 func _mark_rule_triggered(entity: ReactionEntity, rule: ReactionRule) -> void:
-	var trigger_data: Dictionary = _entity_trigger_data.get(entity, null)
-	if trigger_data == null:
-		trigger_data = {}
-		_entity_trigger_data[entity] = trigger_data
+	var trigger_data: Dictionary = _entity_trigger_data.get(entity, {})
+	_entity_trigger_data[entity] = trigger_data
 	
-	var rule_trigger_data: Dictionary = trigger_data.get(rule.trigger, null)
-	if rule_trigger_data == null:
-		rule_trigger_data = {}
-		trigger_data[rule.trigger] = rule_trigger_data
+	var rule_trigger_data: Dictionary = trigger_data.get(rule.trigger, {})
+	trigger_data[rule.trigger] = rule_trigger_data
 	
 	var current_count: int = rule_trigger_data.get(rule, 0)
 	rule_trigger_data[rule] = current_count + 1
