@@ -1,0 +1,11 @@
+{
+    "name": "LANMeshNetwork",
+    "isProject": false,
+    "description": "Connect to peers on your LAN automatically, generating a p2p mesh network",
+    "category": "Misc",
+    "godotVersion": "4.5",
+    "version": "1.0.0",
+    "icon": "Icon.png",
+    "dependencies": [],
+    "ignore": []
+}
