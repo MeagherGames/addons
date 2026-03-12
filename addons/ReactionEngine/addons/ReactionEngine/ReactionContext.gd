@@ -14,7 +14,7 @@ var extra_state: Array[Variant] = []
 func trigger_action(action: ReactionAction) -> Variant:
 	_action_stack.append(action)
 	@warning_ignore("redundant_await")
-	var result = await action._execute(self)
+	var result = await action._execute(self )
 	_action_stack.pop_back()
 	return result
 
@@ -28,7 +28,7 @@ func trigger_rules(entity: ReactionEntity, trigger: ReactionTrigger) -> void:
 		# Rules have limits on how many times they can be triggered during a single combat encounter
 		if _can_trigger_rule(entity, rule):
 			_mark_rule_triggered(entity, rule)
-			await rule.apply(self)
+			await rule.apply(self )
 
 
 func _can_trigger_rule(entity: ReactionEntity, rule: ReactionRule) -> bool:

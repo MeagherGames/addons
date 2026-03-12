@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="ReactionTrigger" load_steps=2 format=3 uid="uid://cq42r2hbvy3mj"]
+
+[ext_resource type="Script" uid="uid://d1ke3b6gvhbbv" path="res://addons/ReactionEngine/ReactionTrigger.gd" id="1_re8c2"]
+
+[resource]
+script = ExtResource("1_re8c2")
+metadata/_custom_type_script = "uid://d1ke3b6gvhbbv"
