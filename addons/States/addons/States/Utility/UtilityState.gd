@@ -18,20 +18,6 @@ func should_consider() -> bool:
 func get_utility() -> float:
 	return 1.0
 
-## Returns the current time in seconds.
-func get_time() -> float:
-	return Time.get_ticks_msec() / 1000.0
-
-## Returns the relative time since some time in seconds.
-func get_elapsed_time(time: float) -> float:
-	var now_seconds = Time.get_ticks_msec() / 1000.0
-	var delta = (now_seconds - time)
-	return delta
-
-## Returns the normalized time since some time in seconds.
-func get_progress_towards_max_duration(time: float, max_seconds: float) -> float:
-	return get_elapsed_time(time) / max_seconds
-
 ## This normalizes a value between 0 and 1 nonlineraly
 ## Useful when very large or small values are not meaningful
 func inverse_normalized(value: float) -> float:

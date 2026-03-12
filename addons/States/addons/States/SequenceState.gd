@@ -6,7 +6,7 @@ class_name SequenceState extends SelectState
 
 ## Transition to the next child state.
 func advance_to_next_state():
-	var start_index = active_state.get_index() + 1 if active_state else -1
+	var start_index = active_state.get_index() + 1 if active_state else 0
 	var next_state = _find_next_state(start_index)
 	if next_state:
 		_select_new_state(next_state)

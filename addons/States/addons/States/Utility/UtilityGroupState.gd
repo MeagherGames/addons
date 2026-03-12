@@ -22,7 +22,7 @@ func get_utility() -> float:
 		if child is UtilityState or child is UtilitySelectState:
 			utility *= lerp(
 				1.0,
-				clampf(child.get_utility(), 0, 1),
+				child.get_utility(),
 				child.weight / total_child_weight
 			)
 			
