@@ -150,7 +150,6 @@ func set_animation(animation_name: String) -> void:
 	_direction = -1 if _current_animation_data.get("reverse", false) else 1
 	_start = Time.get_unix_time_from_system()
 	_update_region()
-	print("Set animation to ", _current_animation, " with data: ", _current_animation_data)
 
 func get_animations() -> Array[String]:
 	var result: Array[String] = []
@@ -182,7 +181,3 @@ func set_process_mode(value: int) -> void:
 func advance(delta: float) -> void:
 	_start = Time.get_unix_time_from_system() - delta
 	_process()
-
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_PREDELETE:
-		set_process_mode(PROCESS_MODE_MANUAL)
