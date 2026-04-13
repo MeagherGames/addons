@@ -38,6 +38,10 @@ func _get_import_options(path: String, _preset: int) -> Array[Dictionary]:
 			"default_value": false,
 		},
 		{
+			"name": "groups",
+			"default_value": false
+		},
+		{
 			"name": "tiles",
 			"default_value": false
 		},
@@ -50,11 +54,18 @@ func _get_import_options(path: String, _preset: int) -> Array[Dictionary]:
 	]
 
 func _get_option_visibility(path: String, option_name: StringName, options: Dictionary) -> bool:
-	return true
+	match option_name:
+		"tiles", "groups":
+			return options.get("layers", false)
+		"tile_set_path":
+			return options.get("tiles", false)
+		_:
+			return true
+			
 
 func _import(source_file, save_path, options, _platform_variants, _gen_files):
 	# options.debug = true
-	var data = Aseprite.load_file(source_file, options)
+	var data := Aseprite.load_file(source_file, options)
 	var path = save_path + "." + _get_save_extension()
 
 	if data.is_empty():
@@ -298,7 +309,7 @@ func create_layer(layer: Dictionary, texture: Texture, tile_sets: Array, options
 	else:
 		return create_sprite_layer(layer, texture, options)
 
-func create_group_node(group: Array[String], layer_node: Node2D, root: Node) -> void:
+func create_group_node(group: Array, layer_node: Node2D, root: Node) -> void:
 	if group.size() > 0:
 		var group_node = root
 		for group_name in group:
