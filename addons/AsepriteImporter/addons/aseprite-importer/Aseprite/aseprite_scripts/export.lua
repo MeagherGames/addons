@@ -45,7 +45,7 @@ local atlas_image = atlas:pack(app.params["pack_mode"])
 
 
 if app.sprite.colorMode == ColorMode.INDEXED then
-    atlas_image:saveAs { filename = atlas_path, palette = sprite.palettes[1] }
+    atlas_image:saveAs { filename = atlas_path, palette = app.sprite.palettes[1] }
 else
     atlas_image:saveAs(atlas_path)
 end
