@@ -43,7 +43,12 @@ atlas = Atlas:new() -- global so the scene can access it
 local scene = Scene:from_sprite() -- Modifies the atlas
 local atlas_image = atlas:pack(app.params["pack_mode"])
 
-atlas_image:saveAs(atlas_path)
+
+if app.sprite.colorMode == ColorMode.INDEXED then
+    atlas_image:saveAs { filename = atlas_path, palette = sprite.palettes[1] }
+else
+    atlas_image:saveAs(atlas_path)
+end
 local data = scene:to_json()
 data.meta = {
     name = app.fs.fileTitle(file_path),
