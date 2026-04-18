@@ -28,6 +28,7 @@ static var _port_offset: int = 0
 
 static var _discovery_socket: PacketPeerUDP = null
 static var _timer = 0.0
+static var debug:bool = false
 
 
 static func _get_peer_id(address: String, port: int) -> int:
@@ -92,15 +93,15 @@ static func _process() -> void:
 					_my_peer.create_mesh(node.my_id)
 					tree.root.multiplayer.multiplayer_peer = _my_peer
 					tree.root.set_multiplayer_authority(node.my_id, true)
-					push_warning("Created mesh %d" % node.my_id)
+					if debug: push_warning("Created mesh %d" % node.my_id)
 					
 				
 				if _my_peer.add_mesh_peer(peer_id, node.peer) != OK:
-					push_error("[%d] Failed to add mesh peer %d at %s:%d at port %d" % [node.my_id, peer_id, node.address, node.port, node.shared_port])
+					if debug: push_error("[%d] Failed to add mesh peer %d at %s:%d at port %d" % [node.my_id, peer_id, node.address, node.port, node.shared_port])
 					_remove_peer(peer_id)
 					continue
 				node.is_connected_to_mesh = true
-				push_warning("[%d] Connected to mesh node %d at %s:%d at port %d" % [node.my_id, peer_id, node.address, node.port, node.shared_port])
+				if debug: push_warning("[%d] Connected to mesh node %d at %s:%d at port %d" % [node.my_id, peer_id, node.address, node.port, node.shared_port])
 			elif service_data[0] != ENetConnection.EventType.EVENT_NONE:
 				push_error("[%d] %s from mesh node %d at %s:%d at port %d" % [node.my_id, _EVENT_TYPE_MESSAGE[service_data[0]], peer_id, node.address, node.port, node.shared_port])
 				push_error(service_data)
@@ -194,13 +195,13 @@ static func _discovery_loop() -> void:
 
 		var json = JSON.new()
 		if json.parse(packet_data) != OK:
-			# push_warning("Received invalid JSON packet from %s:%d" % [peer_address, peer_port])
-			# push_error(json.get_error_message())
+			if debug: push_warning("Received invalid JSON packet from %s:%d" % [peer_address, peer_port])
+			if debug: push_error(json.get_error_message())
 			continue # Invalid JSON
 		var peer_data = json.data
 
-		# push_warning("Received packet from %s:%d (%s, %d)" % [peer_address, peer_port])
-		# push_warning(peer_data)
+		if debug: push_warning("Received packet from %s:%d (%s, %d)" % [peer_address, peer_port])
+		if debug: push_warning(peer_data)
 		
 		match peer_data.get("type", ""):
 			"discovery":
@@ -236,7 +237,7 @@ static func _on_peer_discovered(address: String, port: int) -> void:
 	if _has_peer(peer_id):
 		return
 	
-	# push_warning("Discovered peer %d at %s:%d" % [peer_id, address, port])
+	if debug: push_warning("Discovered peer %d at %s:%d" % [peer_id, address, port])
 	_discovery_socket.set_dest_address(address, port)
 	_discovery_socket.put_packet(JSON.stringify({
 		type = "join_mesh",
@@ -273,7 +274,7 @@ static func _setup_mesh_handshake(my_id: int, peer_id: int, peer_address: String
 	if should_host:
 		if node.shared_port == -1:
 			node.shared_port = _get_next_port()
-			# push_warning("[%d] Attempting to connect to mesh node %d at %s:%d via port %d" % [node.my_id, peer_id, peer_address, peer_port, node.shared_port])
+			if debug: push_warning("[%d] Attempting to connect to mesh node %d at %s:%d via port %d" % [node.my_id, peer_id, peer_address, peer_port, node.shared_port])
 			if node.peer.create_host_bound("*", node.shared_port, 1) != OK:
 				# we'll try again later
 				node.shared_port = -1
@@ -291,7 +292,7 @@ static func _on_mesh_connect(address: String, port: int, shared_port: int) -> vo
 	var node: MeshNode = _mesh_nodes.get(peer_id, null)
 	if not node or node.shared_port != -1:
 		return # Already connecting or invalid
-	# push_warning("[%d] Connecting to mesh node %d at %s:%d via port %d" % [node.my_id, peer_id, address, port, shared_port])
+	if debug: push_warning("[%d] Connecting to mesh node %d at %s:%d via port %d" % [node.my_id, peer_id, address, port, shared_port])
 	node.shared_port = shared_port
 	node.peer.create_host(1)
 	node.peer.connect_to_host(address, shared_port)
@@ -299,6 +300,6 @@ static func _on_mesh_connect(address: String, port: int, shared_port: int) -> vo
 static func _on_peer_disconnected(peer_id: int) -> void:
 	var node: MeshNode = _mesh_nodes.get(peer_id, null)
 	if node:
-		push_warning("[%d] Peer %d disconnected" % [node.my_id, peer_id])
+		if debug: push_warning("[%d] Peer %d disconnected" % [node.my_id, peer_id])
 		return
 	_remove_peer(peer_id)

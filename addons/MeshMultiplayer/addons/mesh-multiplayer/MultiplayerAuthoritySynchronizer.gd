@@ -28,6 +28,7 @@ var strategy: MultiplayerAuthorityStrategy = BasicMultiplayerAuthorityStrategy.n
 		notify_joined()
 		
 var visibility_multiplayer: VisibilityMultiplayer = VisibilityMultiplayer.new()
+var debug:bool = true
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_ENTER_TREE:
@@ -68,10 +69,11 @@ func _on_auth(peer_id: int, data: PackedByteArray) -> void:
 	if err != OK:
 		push_warning("Failed to parse auth data from peer %d" % peer_id)
 		return
-	push_warning("[%s] Authenticating peer %d with data %s" % [Time.get_time_string_from_system(), peer_id, json.data])
+	if debug: push_warning("[%s] Authenticating peer %d with data %s" % [Time.get_time_string_from_system(), peer_id, json.data])
 	var peer_data:Array = json.data[0]
 	var authority_id: int = json.data[1]
-	if strategy.is_peer_authority(multiplayer.get_unique_id(), peer_id, peer_data):
+	var my_authority_id:int = get_multiplayer_authority()
+	if strategy.is_peer_authority(my_authority_id, authority_id, peer_data):
 		set_multiplayer_authority(authority_id, true)
 		authority_changed.emit(authority_id)
 	multiplayer.complete_auth(peer_id)
@@ -82,13 +84,13 @@ func _on_peer_authenticating(peer_id: int) -> void:
 		get_multiplayer_authority()
 	]).to_utf8_buffer())
 	multiplayer.send_auth(peer_id, data)
-	push_warning("[%s] Peer %d is authenticating" % [Time.get_time_string_from_system(), peer_id])
+	if debug: push_warning("[%s] Peer %d is authenticating" % [Time.get_time_string_from_system(), peer_id])
 
 ## Start the join handshake, this does nothing if you're not the authority.
 func notify_joined() -> void:
 	if not is_inside_tree() or not multiplayer:
 		return
-	push_warning("Telling others that we have joined")
+	if debug: push_warning("Telling others that we have joined")
 	_notify_joined.rpc(strategy.get_authority_data(), get_multiplayer_authority())
 
 ## Start the exit handshake from your authority.
@@ -104,6 +106,7 @@ func notify_exit() -> void:
 	authority_changed.emit(id)
 	_notify_exit.rpc()
 	visibility_multiplayer.clear_visible_peers()
+	if debug: push_warning("[%s] Telling Peers I'm exiting" % Time.get_time_string_from_system())
 
 
 #region RPC handshake functions
@@ -122,17 +125,17 @@ func _notify_joined(peer_data:Array, authority_id:int) -> void:
 	var peer_id: int = multiplayer.get_remote_sender_id()
 	
 	if authority_id == my_authority_id:
-		push_warning("Joinning peer %d already recognizes us as authority" % peer_id)
+		if debug: push_warning("Joinning peer %d already recognizes us as authority" % peer_id)
 		_notify_authority.rpc_id(peer_id, strategy.get_authority_data(), my_authority_id)
 		return
 	
 	if strategy.is_peer_authority(my_authority_id, authority_id, peer_data):
 		set_multiplayer_authority(authority_id, true)
 		authority_changed.emit(authority_id)
-		push_warning("Confirming the authority of peer %d" % authority_id)
+		if debug: push_warning("Confirming the authority of peer %d" % authority_id)
 		_confirm_authority.rpc_id(authority_id)
 	else:
-		push_warning("Notifying %d of our authority" % peer_id)
+		if debug: push_warning("Notifying %d of our authority" % peer_id)
 		_notify_authority.rpc_id(peer_id, strategy.get_authority_data(), my_authority_id)
 
 @rpc("any_peer", "call_remote", "reliable", 1)
@@ -143,7 +146,7 @@ func _notify_authority(peer_data:Array, authority_id: int) -> void:
 	if strategy.is_peer_authority(my_authority_id, authority_id, peer_data):
 		set_multiplayer_authority(authority_id, true)
 		authority_changed.emit(authority_id)
-		push_warning("Confirming the authority of peer %d" % authority_id)
+		if debug: push_warning("Confirming the authority of peer %d from %d" % [authority_id, my_authority_id])
 		_confirm_authority.rpc_id(authority_id)
 
 @rpc("any_peer", "call_remote", "reliable", 1)
@@ -158,14 +161,14 @@ func _confirm_authority() -> void:
 		return
 	# A peer for which we requested authority over, has confirmed they accepted our authority
 	var peer_id: int = multiplayer.get_remote_sender_id()
-	push_warning("Peer %d has accepted my authority" % peer_id)
+	if debug: push_warning("Peer %d has accepted my authority" % peer_id)
 	visibility_multiplayer.set_peer_visible(peer_id, true)
 	
 	# Now we're getting into peer "visibility" this is basically final synchronization step
 	# Confirming to all peers that the new peer is a sibling under the authority of their authority
 	
 	# As the authority, tell our peer about others under our authority
-	push_warning("Telling %d about other peers" % peer_id)
+	if debug: push_warning("Telling %d about other peers" % peer_id)
 	for other_peer_id in visibility_multiplayer.get_visible_peers():
 		if other_peer_id == peer_id:
 			continue
@@ -189,11 +192,11 @@ func _notify_peer_visible(peer_id: int) -> void:
 		# This is the authority asking us to confirm our own visibility
 		visibility_multiplayer.set_peer_visible(sender_id, true)
 		_confirm_visible.rpc_id(sender_id)
-		push_warning("Confirming to %d I am ready" % sender_id)
+		if debug: push_warning("Confirming to %d I am ready" % sender_id)
 	elif not visibility_multiplayer.is_peer_visible(peer_id):
 		# THis is the authority telling us about a new peer
 		visibility_multiplayer.set_peer_visible(peer_id, true)
-		push_warning("Peer %d has joined the authority of %d" % [peer_id, get_multiplayer_authority()])
+		if debug: push_warning("Peer %d has joined the authority of %d" % [peer_id, get_multiplayer_authority()])
 
 @rpc("any_peer", "call_remote", "reliable", 1)
 func _confirm_visible() -> void:
@@ -202,6 +205,6 @@ func _confirm_visible() -> void:
 	# The new peer has fully confirmed they are visible and ready to finish syncing
 	var peer_id: int = multiplayer.get_remote_sender_id()
 	peer_ready.emit(peer_id)
-	push_warning("Peer %d has confirmed they are ready" % peer_id)
+	if debug: push_warning("Peer %d has confirmed they are ready" % peer_id)
 
 #endregion

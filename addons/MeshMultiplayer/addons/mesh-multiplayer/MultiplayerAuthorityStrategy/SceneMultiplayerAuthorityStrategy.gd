@@ -37,7 +37,7 @@ func get_authority_data() -> Array:
 func is_peer_authority(authority_id:int, peer_authority_id:int, peer_data: Array) -> bool:
 	var peer_scene_path: String = peer_data[0]
 	var scene_path: String = _get_scene_path()
-	push_warning("is_peer_authority [%d %s %d] [%d %s %d]" % ([authority_id, scene_path, _timestamp, peer_authority_id] + peer_data))
+	#push_warning("is_peer_authority [%d %s %d] [%d %s %d]" % ([authority_id, scene_path, _timestamp, peer_authority_id] + peer_data))
 	if not peer_scene_path or not scene_path or not peer_scene_path == scene_path:
 		return false
 	var peer_timestamp: float = peer_data[1]
