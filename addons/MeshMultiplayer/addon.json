@@ -1,0 +1,11 @@
+{
+    "name": "MeshMultiplayer",
+    "isProject": false,
+    "description": "Mesh Multiplayer",
+    "category": "Multiplayer",
+    "godotVersion": "4.6.2",
+    "version": "1.0.0",
+    "icon": "Icon.png",
+    "dependencies": [],
+    "ignore": []
+}
