@@ -1,0 +1,11 @@
+{
+    "name": "ReactionEngine",
+    "isProject": false,
+    "description": "ReactionEngine",
+    "category": "Misc",
+    "godotVersion": "4.6",
+    "version": "1.0.0",
+    "icon": "Icon.png",
+    "dependencies": [],
+    "ignore": []
+}
