@@ -30,8 +30,6 @@ func _execute(ctx: ReactionContext) -> void:
 	if damage != 0:
 		await ctx.trigger_rules(initiator, ON_DAMAGE_DEALT)
 		if current_health > 0 and target.health <= 0:
-			target.is_dead = true
 			await ctx.trigger_rules(target, ON_DEATH)
 		elif current_health <= 0 and target.health > 0:
-			target.is_dead = false
 			await ctx.trigger_rules(target, ON_REVIVE)
