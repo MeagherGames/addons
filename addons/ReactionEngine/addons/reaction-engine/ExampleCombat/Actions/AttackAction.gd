@@ -13,23 +13,25 @@ const ON_REVIVE = preload("../Triggers/Revive.tres")
 var damage: int = 0
 
 @warning_ignore("shadowed_variable", "shadowed_variable_base_class")
-func _init(initiator: ReactionEntity, target: ReactionEntity, damage: int = 0, types: Array[String] = []) -> void:
+func _init(initiator: CombatEntity, target: CombatEntity, damage: int = 0) -> void:
 	super._init(initiator, target)
 	self.damage = damage
-	self.types = types
 
 func _execute(ctx: ReactionContext) -> void:
+	assert(initiator is CombatEntity)
+	assert(target is CombatEntity)
+	
 	await ctx.trigger_rules(initiator, ON_ATTACK)
 	await ctx.trigger_rules(target, ON_ATTACKED)
-
+	
 	var current_health = target.health
 	await ctx.trigger_rules(target, ON_DAMAGE_TAKEN)
 	target.health -= damage
 	if damage != 0:
 		await ctx.trigger_rules(initiator, ON_DAMAGE_DEALT)
 		if current_health > 0 and target.health <= 0:
-			target.die()
+			target.is_dead = true
 			await ctx.trigger_rules(target, ON_DEATH)
 		elif current_health <= 0 and target.health > 0:
-			target.revive()
+			target.is_dead = false
 			await ctx.trigger_rules(target, ON_REVIVE)

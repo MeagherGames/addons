@@ -8,12 +8,14 @@ var token: Token = null
 var count: int = 1
 
 @warning_ignore("shadowed_variable", "shadowed_variable_base_class")
-func _init(initiator: ReactionEntity, target: ReactionEntity, token: Token = null, count: int = 1) -> void:
+func _init(initiator: CombatEntity, target: CombatEntity, token: Token = null, count: int = 1) -> void:
 	super._init(initiator, target)
 	self.token = token
 	self.count = count
 
 func _execute(ctx: ReactionContext) -> int:
+	assert(initiator is CombatEntity)
+	assert(target is CombatEntity)
 	var current_count = target.tokens.get(token, 0)
 	var new_count = max(0, current_count + count)
 	if token.max_count > 0:

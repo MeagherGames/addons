@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="Token" format=3 uid="uid://can2mpqvid6kf"]
+
+[ext_resource type="Script" uid="uid://dq104x7tdiqp" path="res://addons/reaction-engine/ReactionRule.gd" id="1_0o12t"]
+[ext_resource type="Script" path="res://Combat/Tokens/TokenModifier.gd" id="1_r65yr"]
+[ext_resource type="Script" path="res://Combat/Tokens/Token.gd" id="2_p33g3"]
+[ext_resource type="Script" uid="uid://caks76i2w2pi2" path="res://addons/reaction-engine/ReactionEffect.gd" id="2_ycb45"]
+[ext_resource type="Script" path="res://Combat/Effects/DamageEffect.gd" id="4_kiwxp"]
+[ext_resource type="Script" path="res://Combat/Effects/TokenEffect.gd" id="5_wdtwb"]
+[ext_resource type="Resource" uid="uid://cq42r2hbvy3mj" path="res://addons/reaction-engine/ExampleCombat/Triggers/TurnStart.tres" id="6_86f7q"]
+
+[sub_resource type="Resource" id="Resource_unc0w"]
+script = ExtResource("4_kiwxp")
+damage = 1
+metadata/_custom_type_script = "uid://chsiysadfm50f"
+
+[sub_resource type="Resource" id="Resource_0agk7"]
+script = ExtResource("5_wdtwb")
+token_file_path = "uid://can2mpqvid6kf"
+count = -1
+metadata/_custom_type_script = "uid://caqw41quf0kxu"
+
+[sub_resource type="Resource" id="Resource_awdag"]
+script = ExtResource("1_0o12t")
+trigger = ExtResource("6_86f7q")
+effects = Array[ExtResource("2_ycb45")]([SubResource("Resource_unc0w"), SubResource("Resource_0agk7")])
+metadata/_custom_type_script = "uid://br6bykr8fyk76"
+
+[resource]
+script = ExtResource("2_p33g3")
+rules = Array[ExtResource("1_0o12t")]([SubResource("Resource_awdag")])
